@@ -37,74 +37,48 @@ paths:
               schema: { type: object }
   /api/v1/registrations:
     post:
-      operationId: startRegistration
+      operationId: register
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/StartRegistrationRequest' }
-      responses:
-        '202':
-          description: Registration started
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/RegistrationState' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '429': { $ref: '#/components/responses/Problem' }
-        '500': { $ref: '#/components/responses/Problem' }
-  /api/v1/registrations/{registrationId}/magic-link/verify:
-    post:
-      operationId: verifyMagicLink
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/RegistrationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token]
-              properties:
-                token: { type: string, minLength: 1 }
-      responses:
-        '200': { $ref: '#/components/responses/RegistrationStatus' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '410': { $ref: '#/components/responses/Problem' }
-  /api/v1/registrations/{registrationId}/profile:
-    put:
-      operationId: saveRegistrationProfile
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/RegistrationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RegistrationProfile' }
-      responses:
-        '200': { $ref: '#/components/responses/RegistrationStatus' }
-        '400': { $ref: '#/components/responses/Problem' }
-        '409': { $ref: '#/components/responses/Problem' }
-        '410': { $ref: '#/components/responses/Problem' }
-  /api/v1/registrations/{registrationId}/complete:
-    post:
-      operationId: completeRegistration
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/RegistrationId'
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
         '201':
-          description: Account created
+          description: Account created and signed in
           headers:
             Set-Cookie:
               schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
-        '410': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Signed in
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/sessions:
     get:
       operationId: listSessions
@@ -417,11 +391,6 @@ components:
       in: cookie
       name: __Host-miz_session
   parameters:
-    RegistrationId:
-      name: registrationId
-      in: path
-      required: true
-      schema: { $ref: '#/components/schemas/ObjectId' }
     PostId:
       name: postId
       in: path
@@ -466,15 +435,6 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-    RegistrationStatus:
-      description: Registration state updated
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [status]
-            properties:
-              status: { type: string }
   schemas:
     ObjectId:
       type: string
@@ -488,28 +448,22 @@ components:
     Handle:
       type: string
       pattern: '^[0-9A-Za-z](?!.*__)[0-9A-Za-z_]{1,22}[0-9A-Za-z]$'
-    StartRegistrationRequest:
+    RegisterRequest:
       type: object
       additionalProperties: false
-      required: [provider, email]
+      required: [username, password, displayName, birthDate]
       properties:
-        provider: { type: string, enum: [magicLink, google] }
-        email: { type: string, format: email }
-    RegistrationState:
-      type: object
-      required: [registrationId, status, expiresAt]
-      properties:
-        registrationId: { $ref: '#/components/schemas/ObjectId' }
-        status: { type: string }
-        expiresAt: { $ref: '#/components/schemas/Timestamp' }
-    RegistrationProfile:
-      type: object
-      additionalProperties: false
-      required: [handle, displayName, birthDate]
-      properties:
-        handle: { $ref: '#/components/schemas/Handle' }
+        username: { $ref: '#/components/schemas/Handle' }
+        password: { type: string, minLength: 12, maxLength: 128, format: password }
         displayName: { type: string, minLength: 1, maxLength: 50 }
         birthDate: { type: string, format: date }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { $ref: '#/components/schemas/Handle' }
+        password: { type: string, minLength: 12, maxLength: 128, format: password }
     User:
       type: object
       required: [id, handle, displayName, bio, privacy, version, createdAt, updatedAt]
@@ -616,5 +570,5 @@ components:
         detail: { type: string }
         code:
           type: string
-          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, registration_expired, magic_link_invalid_or_used, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired, cannot_follow_self, invalid_state_transition, parent_not_visible, invalid_cursor, cursor_expired, target_not_visible]
+          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, invalid_credentials, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired, cannot_follow_self, invalid_state_transition, parent_not_visible, invalid_cursor, cursor_expired, target_not_visible]
         requestId: { type: string }

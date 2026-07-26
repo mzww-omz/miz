@@ -25,7 +25,6 @@ const SESSION_RATE_LIMIT_PER_MINUTE: i64 = 120;
 pub struct SecurityState {
     pub pool: PgPool,
     pub origin: String,
-    pub smtp_addr: String,
     pub cursor_signing_key: Vec<u8>,
 }
 

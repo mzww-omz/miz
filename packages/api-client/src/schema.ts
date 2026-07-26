@@ -61,14 +61,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["startRegistration"];
+        post: operations["register"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/registrations/{registrationId}/magic-link/verify": {
+    "/api/v1/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -77,39 +77,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["verifyMagicLink"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/registrations/{registrationId}/profile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["saveRegistrationProfile"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/registrations/{registrationId}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["completeRegistration"];
+        post: operations["login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -351,22 +319,18 @@ export interface components {
          */
         Timestamp: string;
         Handle: string;
-        StartRegistrationRequest: {
-            /** @enum {string} */
-            provider: "magicLink" | "google";
-            /** Format: email */
-            email: string;
-        };
-        RegistrationState: {
-            registrationId: components["schemas"]["ObjectId"];
-            status: string;
-            expiresAt: components["schemas"]["Timestamp"];
-        };
-        RegistrationProfile: {
-            handle: components["schemas"]["Handle"];
+        RegisterRequest: {
+            username: components["schemas"]["Handle"];
+            /** Format: password */
+            password: string;
             displayName: string;
             /** Format: date */
             birthDate: string;
+        };
+        LoginRequest: {
+            username: components["schemas"]["Handle"];
+            /** Format: password */
+            password: string;
         };
         User: {
             id: components["schemas"]["ObjectId"];
@@ -439,7 +403,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "registration_expired" | "magic_link_invalid_or_used" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible";
+            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "invalid_credentials" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible";
             requestId?: string;
         };
     };
@@ -453,20 +417,8 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Registration state updated */
-        RegistrationStatus: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": {
-                    status: string;
-                };
-            };
-        };
     };
     parameters: {
-        RegistrationId: components["schemas"]["ObjectId"];
         PostId: components["schemas"]["ObjectId"];
         TargetUserId: components["schemas"]["ObjectId"];
         UserId: components["schemas"]["ObjectId"];
@@ -541,7 +493,7 @@ export interface operations {
             };
         };
     };
-    startRegistration: {
+    register: {
         parameters: {
             query?: never;
             header?: never;
@@ -550,79 +502,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StartRegistrationRequest"];
+                "application/json": components["schemas"]["RegisterRequest"];
             };
         };
         responses: {
-            /** @description Registration started */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegistrationState"];
-                };
-            };
-            400: components["responses"]["Problem"];
-            429: components["responses"]["Problem"];
-            500: components["responses"]["Problem"];
-        };
-    };
-    verifyMagicLink: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                registrationId: components["parameters"]["RegistrationId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    token: string;
-                };
-            };
-        };
-        responses: {
-            200: components["responses"]["RegistrationStatus"];
-            400: components["responses"]["Problem"];
-            410: components["responses"]["Problem"];
-        };
-    };
-    saveRegistrationProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                registrationId: components["parameters"]["RegistrationId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegistrationProfile"];
-            };
-        };
-        responses: {
-            200: components["responses"]["RegistrationStatus"];
-            400: components["responses"]["Problem"];
-            409: components["responses"]["Problem"];
-            410: components["responses"]["Problem"];
-        };
-    };
-    completeRegistration: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                registrationId: components["parameters"]["RegistrationId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Account created */
+            /** @description Account created and signed in */
             201: {
                 headers: {
                     "Set-Cookie"?: string;
@@ -632,8 +516,39 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
-            410: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     listSessions: {

@@ -121,7 +121,6 @@ object_id!(FollowRelationshipId);
 object_id!(ReportId);
 object_id!(RequestId);
 object_id!(SessionId);
-object_id!(RegistrationId);
 
 #[cfg(test)]
 mod tests {

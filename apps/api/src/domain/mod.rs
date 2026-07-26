@@ -11,7 +11,6 @@ pub use federation_identity::{
 };
 pub use handle::{Handle, HandleError, can_change_handle};
 pub use object_id::{
-    FollowRelationshipId, ObjectIdError, PostId, RegistrationId, ReportId, RequestId, SessionId,
-    UserId,
+    FollowRelationshipId, ObjectIdError, PostId, ReportId, RequestId, SessionId, UserId,
 };
 pub use post::{PostContent, PostContentError};

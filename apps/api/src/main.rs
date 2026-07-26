@@ -49,7 +49,6 @@ async fn main() {
     let state = SecurityState {
         pool,
         origin: std::env::var("APP_ORIGIN").expect("APP_ORIGIN must be set"),
-        smtp_addr: std::env::var("SMTP_ADDR").expect("SMTP_ADDR must be set"),
         cursor_signing_key,
     };
     let app = app(state);
@@ -113,19 +112,11 @@ fn app(state: SecurityState) -> Router {
         .route("/healthz", get(|| async { "ok" }))
         .route(
             "/api/v1/registrations",
-            axum::routing::post(registration::start_registration),
+            axum::routing::post(registration::register),
         )
         .route(
-            "/api/v1/registrations/{registrationId}/magic-link/verify",
-            axum::routing::post(registration::verify_magic_link),
-        )
-        .route(
-            "/api/v1/registrations/{registrationId}/profile",
-            axum::routing::put(registration::save_profile),
-        )
-        .route(
-            "/api/v1/registrations/{registrationId}/complete",
-            axum::routing::post(registration::complete_registration),
+            "/api/v1/auth/login",
+            axum::routing::post(registration::login),
         )
         .route("/readyz", get(ready))
         .route("/openapi.json", get(api::openapi))
@@ -168,7 +159,6 @@ mod tests {
         let response = app(SecurityState {
             pool,
             origin: "https://m1z.jp".to_owned(),
-            smtp_addr: "127.0.0.1:1".to_owned(),
             cursor_signing_key: vec![7; 32],
         })
         .oneshot(
@@ -219,7 +209,6 @@ mod tests {
         let app = app(SecurityState {
             pool,
             origin: "https://m1z.jp".to_owned(),
-            smtp_addr: "127.0.0.1:1".to_owned(),
             cursor_signing_key: vec![7; 32],
         });
         let response = app

@@ -13,10 +13,9 @@
   let nextCursor: string | null = null;
   let loading = true;
   let sending = false;
-  let email = '';
-  let registrationId = '';
-  let registrationStep: 'email' | 'profile' = 'email';
-  let handle = '';
+  let authMode: 'register' | 'login' = 'register';
+  let username = '';
+  let password = '';
   let displayName = '';
   let birthDate = '';
   let content = '';
@@ -34,12 +33,6 @@
     if (me.data) {
       user = me.data;
       await loadTimeline();
-    } else {
-      const params = new URLSearchParams(location.search);
-      registrationId = params.get('registrationId') ?? '';
-      const token = params.get('token');
-      if (registrationId && token) await verifyRegistration(token);
-      else if (registrationId) registrationStep = 'profile';
     }
     loading = false;
   }
@@ -56,60 +49,24 @@
     }
   }
 
-  async function requestLink() {
+  async function authenticate() {
     sending = true;
     notice = '';
     errorMessage = '';
-    const result = await api.POST('/api/v1/registrations', {
-      body: { provider: 'magicLink', email }
-    });
+    const result = authMode === 'register'
+      ? await api.POST('/api/v1/registrations', {
+          body: { username, password, displayName, birthDate }
+        })
+      : await api.POST('/api/v1/auth/login', {
+          body: { username, password }
+        });
     sending = false;
     if (result.data) {
-      registrationId = result.data.registrationId;
-      notice = '登録リンクを送りました。Mailpitでメールを確認してください。';
-      email = '';
-    } else {
-      errorMessage = result.error?.detail ?? 'メールを送信できませんでした。';
-    }
-  }
-
-  async function verifyRegistration(token: string) {
-    const result = await api.POST('/api/v1/registrations/{registrationId}/magic-link/verify', {
-      params: { path: { registrationId } },
-      body: { token }
-    });
-    if (result.data) {
-      registrationStep = 'profile';
-      notice = 'メールを確認できました。プロフィールを設定してください。';
-      history.replaceState({}, '', `/?registrationId=${registrationId}`);
-    } else {
-      errorMessage = result.error?.detail ?? '登録リンクを確認できませんでした。';
-    }
-  }
-
-  async function registerAccount() {
-    sending = true;
-    notice = '';
-    errorMessage = '';
-    const profile = await api.PUT('/api/v1/registrations/{registrationId}/profile', {
-      params: { path: { registrationId } },
-      body: { handle, displayName, birthDate }
-    });
-    if (!profile.data) {
-      sending = false;
-      errorMessage = profile.error?.detail ?? 'プロフィールを保存できませんでした。';
-      return;
-    }
-    const completed = await api.POST('/api/v1/registrations/{registrationId}/complete', {
-      params: { path: { registrationId } }
-    });
-    sending = false;
-    if (completed.data) {
-      user = completed.data;
-      history.replaceState({}, '', '/');
+      user = result.data;
+      password = '';
       await loadTimeline();
     } else {
-      errorMessage = completed.error?.detail ?? 'アカウントを作成できませんでした。';
+      errorMessage = result.error?.detail ?? '認証できませんでした。';
     }
   }
 
@@ -181,34 +138,29 @@
       </section>
 
       <section class="login-card" id="login" aria-labelledby="login-title">
-        <div class="card-number">{registrationStep === 'email' ? '01' : '02'}</div>
-        <h2 id="login-title">{registrationStep === 'email' ? 'MIZをはじめる' : 'プロフィール設定'}</h2>
-        {#if registrationStep === 'email'}
-          <p>メールで本人確認をして、新しいアカウントを作成します。</p>
-          <form onsubmit={(event) => { event.preventDefault(); requestLink(); }}>
-            <label for="email">メールアドレス</label>
-            <input id="email" type="email" autocomplete="email" placeholder="you@example.com" bind:value={email} required />
-            <button class="primary" type="submit" disabled={sending}>{sending ? '送信中…' : '登録リンクを受け取る'}<span aria-hidden="true">↗</span></button>
-          </form>
-          {#if registrationId}
-            <a class="mailpit-link" href="http://localhost:8025" target="_blank" rel="noreferrer">Mailpitを開いてメールを確認 →</a>
-          {/if}
-        {:else}
-          <p>公開プロフィールを入力してください。ハンドルは後から変更できます。</p>
-          <form onsubmit={(event) => { event.preventDefault(); registerAccount(); }}>
-            <label for="handle">ハンドル</label>
-            <div class="handle-input"><span>@</span><input id="handle" autocomplete="username" pattern="[a-z0-9_]+" minlength="3" maxlength="24" placeholder="miz_user" bind:value={handle} required /></div>
+        <div class="card-number">01</div>
+        <div class="auth-tabs" aria-label="認証方法">
+          <button type="button" class:active={authMode === 'register'} onclick={() => { authMode = 'register'; errorMessage = ''; }}>新規登録</button>
+          <button type="button" class:active={authMode === 'login'} onclick={() => { authMode = 'login'; errorMessage = ''; }}>ログイン</button>
+        </div>
+        <h2 id="login-title">{authMode === 'register' ? 'MIZをはじめる' : 'おかえりなさい'}</h2>
+        <p>{authMode === 'register' ? 'ユーザー名とパスワードだけで、すぐに始められます。' : '登録したユーザー名とパスワードを入力してください。'}</p>
+        <form onsubmit={(event) => { event.preventDefault(); authenticate(); }}>
+          <label for="username">ユーザー名</label>
+          <div class="handle-input"><span>@</span><input id="username" autocomplete="username" pattern="[a-z0-9_]+" minlength="3" maxlength="24" placeholder="miz_user" bind:value={username} required /></div>
+          <label for="password">パスワード</label>
+          <input id="password" type="password" autocomplete={authMode === 'register' ? 'new-password' : 'current-password'} minlength="12" maxlength="128" placeholder="12文字以上" bind:value={password} required />
+          {#if authMode === 'register'}
             <label for="display-name">表示名</label>
             <input id="display-name" autocomplete="name" maxlength="50" placeholder="水野 ミズ" bind:value={displayName} required />
             <label for="birth-date">生年月日</label>
             <input id="birth-date" type="date" autocomplete="bday" bind:value={birthDate} required />
             <label class="consent"><input type="checkbox" required /> <span>ローカルMVPの利用条件とプライバシー方針に同意します</span></label>
-            <button class="primary" type="submit" disabled={sending}>{sending ? '作成中…' : 'アカウントを作成'}<span aria-hidden="true">→</span></button>
-          </form>
-        {/if}
-        {#if notice}<p class="message success" role="status">{notice}</p>{/if}
+          {/if}
+          <button class="primary" type="submit" disabled={sending}>{sending ? '処理中…' : authMode === 'register' ? 'アカウントを作成' : 'ログイン'}<span aria-hidden="true">→</span></button>
+        </form>
         {#if errorMessage}<p class="message error" role="alert">{errorMessage}</p>{/if}
-        <small>Magic Linkは30分間有効で、一度だけ使用できます。</small>
+        <small>パスワードはArgon2idでハッシュ化され、平文では保存されません。</small>
       </section>
     </main>
   {:else}
@@ -307,7 +259,10 @@
   .principles strong { color: #17223a; font: 600 12px/1.4 "Yu Gothic", sans-serif; letter-spacing: .04em; }
   .login-card { align-self: center; margin: 40px clamp(24px, 4vw, 64px); padding: clamp(30px, 4vw, 52px); border: 1px solid #17223a; background: rgba(255,255,255,.28); box-shadow: 12px 12px 0 #1646d8; }
   .card-number { color: #e64b2a; font: 700 11px Georgia, serif; }
-  .login-card h2 { margin: 34px 0 12px; font: 500 30px "Yu Mincho", serif; }
+  .auth-tabs { display: flex; gap: 18px; margin: 26px 0 0; border-bottom: 1px solid rgba(23,34,58,.2); }
+  .auth-tabs button { border: 0; border-bottom: 3px solid transparent; color: rgba(23,34,58,.5); background: transparent; padding: 0 0 10px; cursor: pointer; font-size: 11px; font-weight: 700; }
+  .auth-tabs button.active { border-color: #1646d8; color: #17223a; }
+  .login-card h2 { margin: 28px 0 12px; font: 500 30px "Yu Mincho", serif; }
   .login-card > p { font-size: 13px; line-height: 1.8; }
   .login-card form { margin: 35px 0 24px; }
   label { display: block; margin-bottom: 10px; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
@@ -319,7 +274,6 @@
   .handle-input input { border: 0; }
   .consent { display: flex !important; align-items: flex-start; gap: 9px; font-size: 10px; line-height: 1.6; cursor: pointer; }
   .consent input { width: 15px; height: 15px; flex: 0 0 auto; margin: 1px 0 0; accent-color: #1646d8; }
-  .mailpit-link { display: inline-block; margin-bottom: 12px; color: #1646d8; font-size: 11px; font-weight: 700; }
   .primary { width: 100%; display: flex; justify-content: space-between; margin-top: 22px; border: 0; color: white; background: #17223a; padding: 17px 18px; cursor: pointer; font-size: 12px; font-weight: 700; }
   .primary:hover, .post-button:hover { background: #1646d8; }
   button:disabled { opacity: .5; cursor: wait; }

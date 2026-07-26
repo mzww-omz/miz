@@ -68,7 +68,7 @@ CSV から読めるスタック指定は、Axum の Router / extractor モデル
 | Realtime transport | foundation 側に SSE 契約の痕跡はあるが、専用 realtime task が post-MVP のため、初回は polling で十分 |
 | 削除復元の完全状態機械 | foundation にはあるが、MVP の直接価値より先に出す必要はない |
 
-この切り方は、**CSV の authoritative comments を維持しつつ、相互に競合する記述がある部分を最小実装へ収束させる**という方針です。特に、`POST /api/v1/accounts` と `POST /api/v1/registrations/{registrationId}/complete` は重複的に見えるため、MVP では **後者だけを正規のアカウント作成経路**にするのが API 面積を最小化します。また、SSE は後から `EventSource` ベースで追加しやすいため、初回はホームタイムラインの polling で十分です。`EventSource` はサーバーから `text/event-stream` でイベントを継続送信するブラウザ API です。citeturn2search3turn2search7
+この切り方は、**CSV の authoritative comments を維持しつつ、相互に競合する記述がある部分を最小実装へ収束させる**という方針です。アカウント作成は `POST /api/v1/registrations`、ログインは `POST /api/v1/auth/login` に限定し、メール認証の中間状態を持たないことで API 面積を最小化します。また、SSE は後から `EventSource` ベースで追加しやすいため、初回はホームタイムラインの polling で十分です。`EventSource` はサーバーから `text/event-stream` でイベントを継続送信するブラウザ API です。citeturn2search3turn2search7
 
 ## MVP 項目別仕様
 
@@ -86,7 +86,7 @@ CSV から読めるスタック指定は、Axum の Router / extractor モデル
 
 | 項目 | 具体仕様 |
 |---|---|
-| 登録・ログイン・セッション | **Goal**: Magic Link または Google OAuth で仮登録を開始し、同意・年齢判定・ハンドル一意性確認後に account を確定し、opaque session cookie を発行する。 **Acceptance criteria**: 未完了登録は期限切れで破棄、Magic Link は単回消費、Google は state と PKCE を検証、セッションは idle 7 日 / absolute 30 日、セッション一覧と revoke を提供。 **Inputs/Outputs**: 入力は `email`, `provider`, `birthDate`, `termsVersion`, `privacyVersion`, `handle`, OAuth callback params。出力は `registrationId`, `user`, `session`。 **Data model**: `registration_attempts(id,email_normalized,status,expires_at,...)`, `registration_profiles(registration_id,handle,display_name,birth_date)`, `registration_consents(...)`, `auth_challenges(id,kind,provider,token_hash,state_hash,nonce_hash,expires_at,consumed_at)`, `auth_identities(user_id,provider,provider_subject,provider_email)`, `user_private_attributes(user_id,email_normalized,birth_date)`, `user_consents(user_id,document_type,document_version,accepted_at)`, `sessions(id,user_id,token_hash,idle_expires_at,absolute_expires_at,revoked_at,...)`。 **Endpoints**: `POST /api/v1/registrations`, `POST /api/v1/registrations/{registrationId}/magic-link`, `POST /api/v1/registrations/{registrationId}/magic-link/verify`, `GET /api/v1/registrations/{registrationId}/oauth/google/start`, `GET /api/v1/auth/oauth/google/callback`, `PUT /api/v1/registrations/{registrationId}/profile`, `PUT /api/v1/registrations/{registrationId}/consents`, `POST /api/v1/registrations/{registrationId}/complete`, `GET /api/v1/sessions`, `DELETE /api/v1/sessions/{sessionId}`, `DELETE /api/v1/sessions/current`。 **Key logic**: 登録は `users` に直書きせず仮登録テーブルへ保持し、完了時のみトランザクションで `users + identities + consents + sessions` を確定する。 **Error cases**: `registration_expired`, `magic_link_invalid_or_used`, `handle_conflict`, `csrf_failed`, `auth_required`, `rate_limited`。 **Dependencies**: PostgreSQL, Google OAuth credential, mail sender, cookie/CSRF middleware。 **Minimal tests**: Magic Link の再利用拒否、期限切れ拒否、Google state mismatch 拒否、セッション revoke 反映、unknown email への一般化応答。 |
+| 登録・ログイン・セッション | **Goal**: MVPではメール認証を使用せず、username + password でaccountを作成・ログインし、opaque session cookieを発行する。 **Acceptance criteria**: usernameはcase-insensitiveで一意、passwordは12〜128 bytesでArgon2idによりsalt付きhashとして保存し、認証失敗はusernameの存在を露出しない。セッションはidle 7日 / absolute 30日、一覧とrevokeを提供する。 **Inputs/Outputs**: 登録入力は`username`, `password`, `displayName`, `birthDate`、ログイン入力は`username`, `password`。出力は`user`とsession cookie。 **Data model**: `password_credentials(user_id,password_hash,created_at,updated_at)`, `sessions(...)`。 **Endpoints**: `POST /api/v1/registrations`, `POST /api/v1/auth/login`, `GET /api/v1/sessions`, `DELETE /api/v1/sessions/{sessionId}`, `DELETE /api/v1/sessions/current`。 **Key logic**: account・credential・初回sessionを単一transactionで作成し、Origin検証とrate limitを適用する。 **Error cases**: `invalid_credentials`, `handle_conflict`, `csrf_failed`, `rate_limited`。 **Dependencies**: PostgreSQL, Argon2id, Cookie/CSRF middleware。 **Minimal tests**: salt付きhash、登録とログイン、重複username、誤password、セッションrevoke。Passkeyはpost-MVP。 |
 | プロフィール・ハンドル・公開設定 | **Goal**: `handle`, `displayName`, `bio`, `privacy(public/private)` を編集し、公開範囲をサーバー側で判定する。 **Acceptance criteria**: handle は 3〜24 の `[a-z0-9_]`、case-insensitive 一意、旧 handle の再利用禁止、プロフィール更新は `If-Match` 必須、private account の投稿は非 follower へ非表示。 **Inputs/Outputs**: `handle`, `displayName`, `bio`, `privacy` → `user profile`。 **Data model**: `users(id,handle,display_name,bio,privacy,status,version,created_at,updated_at)`, `handle_aliases(old_handle,user_id,created_at)`。 **Endpoints**: `GET /api/v1/users/me`, `PATCH /api/v1/users/me`, `GET /api/v1/users/{userId}`, `GET /api/v1/handles/{handle}`。 **Key logic**: handle 変更時は正規化→予約語判定→一意性確認→ alias 留保。 privacy は閲覧判定共通関数へ寄せる。 **Error cases**: `invalid_handle`, `reserved_handle`, `handle_conflict`, `version_conflict`, `resource_not_found`。 **Dependencies**: 認証済み user, sessions, optimistic locking。 **Minimal tests**: handle 一意性、旧 handle lookup、private account 非表示、If-Match 不一致。 |
 | 短文投稿・Reply | **Goal**: 1〜500 grapheme の本文投稿と reply を作成し、本人のみ編集削除できる。 **Acceptance criteria**: 空白のみ禁止、改行維持、1〜500 grapheme、UTF-8 8KB 以下、Reply は親より広い可視性を持てない、`POST` は `Idempotency-Key`、`PATCH`/`DELETE` は `If-Match` 必須。 **Inputs/Outputs**: `content`, `replyToPostId`, headers → `post/reply`。 **Data model**: `posts(id,author_id,reply_to_post_id,content,effective_visibility,state,version,created_at,updated_at,deleted_at)`、`idempotency_keys(...)`。 **Endpoints**: `POST /api/v1/posts`, `GET /api/v1/posts/{postId}`, `PATCH /api/v1/posts/{postId}`, `DELETE /api/v1/posts/{postId}`, `POST /api/v1/posts/{postId}/replies`, `GET /api/v1/posts/{postId}/replies`。 **Key logic**: grapheme cluster 単位の長さ判定、サーバー側 visibility 決定、Reply は `min(parent_visibility, author_privacy)`、削除は tombstone。 **Error cases**: `content_empty`, `content_too_long`, `parent_not_visible`, `idempotency_required`, `idempotency_conflict`, `version_conflict`。 **Dependencies**: users, privacy 判定, follow relationship, idempotency storage。 **Minimal tests**: emoji 境界、空白のみ拒否、同一 `Idempotency-Key` 再送、親非表示 reply 拒否。 |
 | Follow・承認・ホームタイムライン | **Goal**: public account には即 accepted、private account には pending follow request を作成し、accepted relation と self の投稿だけで home timeline を出す。 **Acceptance criteria**: self follow 禁止、pending→accepted/rejected、unfollow/cancel/remove が冪等、home timeline は `created_at DESC, id DESC` keyset pagination、可視でない投稿を返さない。 **Inputs/Outputs**: `targetUserId`, `cursor`, `limit` → `relationship`, `timeline page`。 **Data model**: `follow_relationships(id,follower_id,followee_id,status,created_at,updated_at)`。 **Endpoints**: `PUT /api/v1/users/{targetUserId}/follow`, `DELETE /api/v1/users/{targetUserId}/follow`, `GET /api/v1/follow-requests`, `POST /api/v1/follow-requests/{relationshipId}/accept`, `POST /api/v1/follow-requests/{relationshipId}/reject`, `GET /api/v1/users/{userId}/followers`, `GET /api/v1/users/{userId}/following`, `GET /api/v1/timelines/home`。 **Key logic**: state machine 厳守、timeline は recommendation を入れず self + accepted follow only、cursor は署名付き keyset。 **Error cases**: `cannot_follow_self`, `invalid_state_transition`, `target_not_visible`, `invalid_cursor`, `cursor_expired`。 **Dependencies**: users, privacy, posts, cursor signer。 **Minimal tests**: public 即 accepted、private pending→accept、home timeline 順序安定、解除後除外。 |
@@ -96,10 +96,8 @@ CSV から読めるスタック指定は、Axum の Router / extractor モデル
 
 | Method | Path | Request JSON | Response JSON |
 |---|---|---|---|
-| POST | `/api/v1/registrations` | `{"provider":"magic_link","email":"alice@example.com"}` | `202 {"registrationId":"reg_01...","status":"started","expiresAt":"2026-07-27T00:00:00Z"}` |
-| POST | `/api/v1/registrations/{registrationId}/magic-link/verify` | `{"token":"raw-token"}` | `200 {"status":"emailVerified"}` |
-| PUT | `/api/v1/registrations/{registrationId}/profile` | `{"handle":"miz_user","displayName":"Miz User","birthDate":"2000-01-01"}` | `200 {"status":"profileSaved"}` |
-| POST | `/api/v1/registrations/{registrationId}/complete` | `{}` | `201 {"id":"u_01...","handle":"miz_user","displayName":"Miz User","privacy":"public","version":1}` |
+| POST | `/api/v1/registrations` | `{"username":"miz_user","password":"correct horse battery staple","displayName":"Miz User","birthDate":"2000-01-01"}` | `201 {"id":"u_01...","handle":"miz_user","displayName":"Miz User","privacy":"public","version":1}` |
+| POST | `/api/v1/auth/login` | `{"username":"miz_user","password":"correct horse battery staple"}` | `200 {"id":"u_01...","handle":"miz_user","displayName":"Miz User","privacy":"public","version":1}` |
 | GET | `/api/v1/users/me` | なし | `200 {"id":"u_01...","handle":"miz_user","displayName":"Miz User","bio":"","privacy":"public","version":3}` |
 | PATCH | `/api/v1/users/me` | `{"displayName":"Miz v2","bio":"Hello","privacy":"private"}` | `200 {"id":"u_01...","displayName":"Miz v2","bio":"Hello","privacy":"private","version":4}` |
 | POST | `/api/v1/posts` | `{"content":"こんにちは"}` | `201 {"id":"p_01...","authorId":"u_01...","replyToPostId":null,"content":"こんにちは","effectiveVisibility":"public","state":"published","version":1}` |
@@ -425,13 +423,9 @@ CREATE TABLE handle_aliases (
 
 CREATE TABLE user_private_attributes (
   user_id VARCHAR(22) PRIMARY KEY REFERENCES users(id),
-  email_normalized TEXT NOT NULL,
   birth_date DATE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE UNIQUE INDEX user_private_email_unique_ci
-  ON user_private_attributes (LOWER(email_normalized));
 
 CREATE TABLE user_consents (
   user_id VARCHAR(22) NOT NULL REFERENCES users(id),
@@ -441,54 +435,11 @@ CREATE TABLE user_consents (
   PRIMARY KEY (user_id, document_type, document_version)
 );
 
-CREATE TABLE auth_identities (
-  user_id VARCHAR(22) NOT NULL REFERENCES users(id),
-  provider VARCHAR(32) NOT NULL,
-  provider_subject TEXT NOT NULL,
-  provider_email TEXT,
+CREATE TABLE password_credentials (
+  user_id VARCHAR(22) PRIMARY KEY REFERENCES users(id),
+  password_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (provider, provider_subject)
-);
-
-CREATE TABLE registration_attempts (
-  id VARCHAR(22) PRIMARY KEY,
-  email_normalized TEXT NOT NULL,
-  source VARCHAR(32) NOT NULL,
-  status VARCHAR(32) NOT NULL,
-  email_verified_at TIMESTAMPTZ,
-  completed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE TABLE registration_profiles (
-  registration_id VARCHAR(22) PRIMARY KEY REFERENCES registration_attempts(id),
-  handle VARCHAR(24),
-  display_name VARCHAR(50),
-  birth_date DATE,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE registration_consents (
-  registration_id VARCHAR(22) NOT NULL REFERENCES registration_attempts(id),
-  document_type VARCHAR(32) NOT NULL,
-  document_version VARCHAR(32) NOT NULL,
-  locale VARCHAR(16) NOT NULL,
-  accepted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (registration_id, document_type, document_version)
-);
-
-CREATE TABLE auth_challenges (
-  id VARCHAR(22) PRIMARY KEY,
-  kind VARCHAR(32) NOT NULL,
-  provider VARCHAR(32) NOT NULL,
-  registration_id VARCHAR(22) REFERENCES registration_attempts(id),
-  token_hash TEXT,
-  state_hash TEXT,
-  nonce_hash TEXT,
-  expires_at TIMESTAMPTZ NOT NULL,
-  consumed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE sessions (
@@ -682,7 +633,7 @@ gantt
     API契約/OpenAPI/Problem Details固定     :a1, 2026-07-27, 3d
     DBスキーマ/migration/ID方式            :a2, 2026-07-29, 3d
     section Week 2
-    登録/Magic Link/Google OAuth           :b1, 2026-08-03, 4d
+    username/password 登録・ログイン        :b1, 2026-08-03, 4d
     セッション管理/プロフィール/公開設定   :b2, 2026-08-06, 2d
     section Week 3
     短文投稿/Reply/Idempotency             :c1, 2026-08-10, 3d
@@ -696,7 +647,7 @@ Docker Compose は multi-container アプリを単一 YAML で定義・起動す
 
 ## 未確定事項と前提
 
-この CSV から**確定できること**と**未指定のため仮定したこと**は分けて扱うべきです。確定できるのは、**Rust/Axum + SvelteKit + PostgreSQL + OpenAPI + Cookie セッション + Google OAuth/Magic Link** という方向性、`TYPE=task` と `TYPE=note` の結びつき、`@mvp` と priority 1 foundation が MVP の中心であることです。逆に、**最低利用年齢の具体値、利用規約/プライバシーポリシーの文書本文と version、メール送信事業者、クラウドベンダー、画像/動画ストレージ、予約語一覧、監査ログ保持期間**は CSV 単体では未指定です。
+この CSV から**確定できること**と**未指定のため仮定したこと**は分けて扱うべきです。確定できるのは、**Rust/Axum + SvelteKit + PostgreSQL + OpenAPI + Cookie セッション** という方向性、`TYPE=task` と `TYPE=note` の結びつき、`@mvp` と priority 1 foundation が MVP の中心であることです。逆に、**最低利用年齢の具体値、利用規約/プライバシーポリシーの文書本文と version、クラウドベンダー、画像/動画ストレージ、予約語一覧、監査ログ保持期間**は CSV 単体では未指定です。
 
 本計画で採った前提は次のとおりです。  
 **前提一**として、CSV の一部 note はセル内に省略記号があり全文が確認できないため、**見えている要件だけを authoritative requirements として採用**しました。  
@@ -704,6 +655,6 @@ Docker Compose は multi-container アプリを単一 YAML で定義・起動す
 **前提三**として、ホスティングは未指定なので、**containerized deployment** を維持し、Docker Compose をローカル基準にしました。  
 **前提四**として、`短文投稿` task の note に添付の痕跡はあるものの、専用メディア task が post-MVP にあるため、**MVP は本文のみ**に切り、メディアは後続へ送ります。  
 **前提五**として、SSE は foundation に触れられている一方で realtime task が post-MVP のため、**ホームタイムラインは polling で先に出し、SSE は後続追加**としました。  
-**前提六**として、`POST /api/v1/accounts` と `POST /api/v1/registrations/{registrationId}/complete` は競合するため、**MVP では後者のみ正規経路**としました。
+**前提六**として、メール認証を廃止し、**MVPではusername + password登録を正規経路**としました。Passkeyはpost-MVPです。
 
-以上を踏まえると、Codex に直接 handoff すべき最小指示は、**まず OpenAPI と SQL migration を固定し、次に registration/auth/session、続いて profile/privacy、post/reply、follow/timeline の順で実装する**ことです。Problem Details、Cookie 属性、CSRF、PKCE、Docker Compose、GitHub Actions はいずれも一次資料が揃っており、ここで示した plan はすべて公式仕様・公式ドキュメントの範囲内で素直に実装できます。citeturn2search0turn4search1turn4search5turn3search1turn2search1turn0search3turn1search0
+以上を踏まえると、Codex に直接 handoff すべき最小指示は、**まず OpenAPI と SQL migration を固定し、次に registration/auth/session、続いて profile/privacy、post/reply、follow/timeline の順で実装する**ことです。Problem Details、Cookie 属性、CSRF、Argon2id、Docker Compose、GitHub Actions はいずれも一次資料が揃っており、ここで示した plan はすべて公式仕様・公式ドキュメントの範囲内で素直に実装できます。citeturn2search0turn4search1turn4search5turn3search1turn2search1turn0search3turn1search0
