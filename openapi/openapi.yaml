@@ -258,6 +258,22 @@ paths:
         '428': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
   /api/v1/posts/{postId}/replies:
+    get:
+      operationId: listReplies
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Replies ordered oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
     post:
       operationId: createReply
       parameters:
@@ -274,10 +290,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/users/{targetUserId}/follow:
     put:
       operationId: followUser
@@ -291,7 +310,9 @@ paths:
               schema: { $ref: '#/components/schemas/FollowRelationship' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: unfollowUser
       parameters:
@@ -299,24 +320,94 @@ paths:
       responses:
         '204': { description: Relationship removed }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/follow-requests:
+    get:
+      operationId: listFollowRequests
+      responses:
+        '200':
+          description: Pending follow requests for the current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowRelationshipList' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/follow-requests/{relationshipId}/accept:
+    post:
+      operationId: acceptFollowRequest
+      parameters:
+        - $ref: '#/components/parameters/RelationshipId'
+      responses:
+        '200':
+          description: Accepted follow relationship
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowRelationship' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/follow-requests/{relationshipId}/reject:
+    post:
+      operationId: rejectFollowRequest
+      parameters:
+        - $ref: '#/components/parameters/RelationshipId'
+      responses:
+        '200':
+          description: Rejected follow relationship
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowRelationship' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/followers:
+    get:
+      operationId: listFollowers
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Accepted followers and derived total
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowRelationshipList' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{userId}/following:
+    get:
+      operationId: listFollowing
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Accepted following relationships and derived total
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowRelationshipList' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/timelines/home:
     get:
       operationId: getHomeTimeline
       parameters:
-        - name: limit
-          in: query
-          schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
-        - name: cursor
-          in: query
-          schema: { type: string }
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
-          description: Home timeline
+          description: Following timeline ordered newest first
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PostPage' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     sessionCookie:
@@ -339,6 +430,24 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/ObjectId' }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    RelationshipId:
+      name: relationshipId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    PageLimit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, maxLength: 2048 }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -475,6 +584,14 @@ components:
         status: { type: string, enum: [pending, accepted, rejected, cancelled, removed] }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    FollowRelationshipList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/FollowRelationship' }
+        total: { type: integer, minimum: 0 }
     PostPage:
       type: object
       required: [items, nextCursor]
@@ -497,5 +614,5 @@ components:
         detail: { type: string }
         code:
           type: string
-          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired]
+          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired, cannot_follow_self, invalid_state_transition, parent_not_visible, invalid_cursor, cursor_expired, target_not_visible]
         requestId: { type: string }

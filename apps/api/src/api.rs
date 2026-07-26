@@ -113,6 +113,9 @@ mod tests {
         let document: serde_json::Value = serde_yaml::from_str(OPENAPI_YAML).unwrap();
         assert_eq!(document["openapi"], "3.1.0");
         assert!(document["paths"]["/api/v1/posts"].is_object());
+        assert!(document["paths"]["/api/v1/posts/{postId}/replies"]["get"].is_object());
+        assert!(document["paths"]["/api/v1/follow-requests/{relationshipId}/accept"].is_object());
+        assert!(document["paths"]["/api/v1/timelines/home"].is_object());
         assert_eq!(
             document["components"]["schemas"]["ObjectId"]["pattern"],
             "^[0-9A-Za-z]{22}$"

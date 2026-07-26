@@ -3,10 +3,12 @@ mod application;
 pub mod authorization;
 mod federation;
 mod observability;
+mod pagination;
 mod posts;
 mod profile;
 pub mod security;
 mod sessions;
+mod social;
 
 use axum::{
     Router,
@@ -36,9 +38,17 @@ async fn main() {
     let pool = infrastructure::database(&database_url)
         .await
         .expect("database connection and migrations must succeed");
+    let cursor_signing_key = std::env::var("CURSOR_SIGNING_KEY")
+        .expect("CURSOR_SIGNING_KEY must be set")
+        .into_bytes();
+    assert!(
+        cursor_signing_key.len() >= 32,
+        "CURSOR_SIGNING_KEY must contain at least 32 bytes"
+    );
     let state = SecurityState {
         pool,
         origin: std::env::var("APP_ORIGIN").expect("APP_ORIGIN must be set"),
+        cursor_signing_key,
     };
     let app = app(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
@@ -60,6 +70,26 @@ fn app(state: SecurityState) -> Router {
                 .patch(posts::update_post)
                 .delete(posts::delete_post),
         )
+        .route(
+            "/posts/{postId}/replies",
+            get(posts::list_replies).post(posts::create_reply),
+        )
+        .route(
+            "/users/{targetUserId}/follow",
+            axum::routing::put(social::follow_user).delete(social::unfollow_user),
+        )
+        .route("/follow-requests", get(social::list_follow_requests))
+        .route(
+            "/follow-requests/{relationshipId}/accept",
+            axum::routing::post(social::accept_follow_request),
+        )
+        .route(
+            "/follow-requests/{relationshipId}/reject",
+            axum::routing::post(social::reject_follow_request),
+        )
+        .route("/users/{userId}/followers", get(social::list_followers))
+        .route("/users/{userId}/following", get(social::list_following))
+        .route("/timelines/home", get(social::home_timeline))
         .route(
             "/sessions",
             get(sessions::list_sessions).delete(sessions::revoke_all_sessions),
@@ -120,6 +150,7 @@ mod tests {
         let response = app(SecurityState {
             pool,
             origin: "https://m1z.jp".to_owned(),
+            cursor_signing_key: vec![7; 32],
         })
         .oneshot(
             Request::get("/api/v1/unlisted")
@@ -143,13 +174,17 @@ mod tests {
         let pool = PgPool::connect(&database_url).await.unwrap();
         infrastructure::migrate(&pool).await.unwrap();
         let user_id = miz_api::domain::UserId::new().unwrap();
+        let target_id = miz_api::domain::UserId::new().unwrap();
         let session_id = miz_api::domain::SessionId::new().unwrap();
         let tokens = security::SessionTokens::generate().unwrap();
-        sqlx::query("INSERT INTO users (id, display_name) VALUES ($1, 'HTTP Author')")
-            .bind(user_id.to_bytes().to_vec())
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "INSERT INTO users (id, display_name) VALUES ($1, 'HTTP Author'), ($2, 'HTTP Target')",
+        )
+        .bind(user_id.to_bytes().to_vec())
+        .bind(target_id.to_bytes().to_vec())
+        .execute(&pool)
+        .await
+        .unwrap();
         sqlx::query(
             "INSERT INTO sessions (id, user_id, token_hash, csrf_token_hash, idle_expires_at, absolute_expires_at) \
              VALUES ($1, $2, $3, $4, now() + INTERVAL '7 days', now() + INTERVAL '30 days')",
@@ -162,32 +197,54 @@ mod tests {
         .await
         .unwrap();
 
-        let response = app(SecurityState {
+        let app = app(SecurityState {
             pool,
             origin: "https://m1z.jp".to_owned(),
-        })
-        .oneshot(
-            Request::post("/api/v1/posts")
-                .header("content-type", "application/json")
-                .header("origin", "https://m1z.jp")
-                .header("x-csrf-token", &tokens.csrf)
-                .header("idempotency-key", "http-post-test")
-                .header(
-                    "cookie",
-                    format!(
-                        "__Host-miz_session={}; __Host-miz_csrf={}",
-                        tokens.session, tokens.csrf
-                    ),
-                )
-                .body(Body::from(r#"{"content":"hello\nworld"}"#))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+            cursor_signing_key: vec![7; 32],
+        });
+        let response = app
+            .clone()
+            .oneshot(
+                Request::post("/api/v1/posts")
+                    .header("content-type", "application/json")
+                    .header("origin", "https://m1z.jp")
+                    .header("x-csrf-token", &tokens.csrf)
+                    .header("idempotency-key", "http-post-test")
+                    .header(
+                        "cookie",
+                        format!(
+                            "__Host-miz_session={}; __Host-miz_csrf={}",
+                            tokens.session, tokens.csrf
+                        ),
+                    )
+                    .body(Body::from(r#"{"content":"hello\nworld"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(response.status(), StatusCode::CREATED);
         assert_eq!(
             response.headers()[axum::http::header::CONTENT_TYPE],
             "application/json"
         );
+
+        let response = app
+            .oneshot(
+                Request::put(format!("/api/v1/users/{target_id}/follow"))
+                    .header("origin", "https://m1z.jp")
+                    .header("x-csrf-token", &tokens.csrf)
+                    .header(
+                        "cookie",
+                        format!(
+                            "__Host-miz_session={}; __Host-miz_csrf={}",
+                            tokens.session, tokens.csrf
+                        ),
+                    )
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }

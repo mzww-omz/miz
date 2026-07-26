@@ -219,7 +219,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["listReplies"];
         put?: never;
         post: operations["createReply"];
         delete?: never;
@@ -239,6 +239,86 @@ export interface paths {
         put: operations["followUser"];
         post?: never;
         delete: operations["unfollowUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/follow-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFollowRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/follow-requests/{relationshipId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acceptFollowRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/follow-requests/{relationshipId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectFollowRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{userId}/followers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFollowers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{userId}/following": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFollowing"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -344,6 +424,10 @@ export interface components {
             createdAt: components["schemas"]["Timestamp"];
             updatedAt: components["schemas"]["Timestamp"];
         };
+        FollowRelationshipList: {
+            items: components["schemas"]["FollowRelationship"][];
+            total: number;
+        };
         PostPage: {
             items: components["schemas"]["Post"][];
             nextCursor: string | null;
@@ -355,7 +439,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired";
+            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible";
             requestId?: string;
         };
     };
@@ -385,6 +469,10 @@ export interface components {
         RegistrationId: components["schemas"]["ObjectId"];
         PostId: components["schemas"]["ObjectId"];
         TargetUserId: components["schemas"]["ObjectId"];
+        UserId: components["schemas"]["ObjectId"];
+        RelationshipId: components["schemas"]["ObjectId"];
+        PageLimit: number;
+        Cursor: string;
         IdempotencyKey: string;
         IfMatch: string;
     };
@@ -810,6 +898,35 @@ export interface operations {
             429: components["responses"]["Problem"];
         };
     };
+    listReplies: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["PageLimit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                postId: components["parameters"]["PostId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Replies ordered oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostPage"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
     createReply: {
         parameters: {
             query?: never;
@@ -836,10 +953,13 @@ export interface operations {
                     "application/json": components["schemas"]["Post"];
                 };
             };
+            400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     followUser: {
@@ -864,7 +984,9 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     unfollowUser: {
@@ -886,13 +1008,141 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    listFollowRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending follow requests for the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowRelationshipList"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    acceptFollowRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                relationshipId: components["parameters"]["RelationshipId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted follow relationship */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowRelationship"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    rejectFollowRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                relationshipId: components["parameters"]["RelationshipId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected follow relationship */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowRelationship"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    listFollowers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted followers and derived total */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowRelationshipList"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    listFollowing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted following relationships and derived total */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowRelationshipList"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     getHomeTimeline: {
         parameters: {
             query?: {
-                limit?: number;
-                cursor?: string;
+                limit?: components["parameters"]["PageLimit"];
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -900,7 +1150,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Home timeline */
+            /** @description Following timeline ordered newest first */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -911,6 +1161,7 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
 }

@@ -34,6 +34,7 @@ services:
     environment:
       DATABASE_URL: postgres://miz:miz@db:5432/miz
       APP_ORIGIN: http://localhost:8080
+      CURSOR_SIGNING_KEY: insecure-local-cursor-signing-key-change-me
       RUST_LOG: miz_api=debug,tower_http=debug
     depends_on:
       migrate:
