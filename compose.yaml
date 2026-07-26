@@ -17,9 +17,7 @@ services:
       dockerfile: apps/web/Dockerfile
 
   migrate:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: miz-api
     command: ["miz-migrate"]
     environment:
       DATABASE_URL: postgres://miz:miz@db:5432/miz
@@ -28,6 +26,7 @@ services:
         condition: service_healthy
 
   api:
+    image: miz-api
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -35,6 +34,7 @@ services:
       DATABASE_URL: postgres://miz:miz@db:5432/miz
       APP_ORIGIN: http://localhost:8080
       CURSOR_SIGNING_KEY: insecure-local-cursor-signing-key-change-me
+      OPERATOR_MFA_ENCRYPTION_KEY: insecure-local-operator-mfa-key-change-me
       RUST_LOG: miz_api=debug,tower_http=debug
     depends_on:
       migrate:

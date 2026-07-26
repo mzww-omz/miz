@@ -26,6 +26,7 @@ pub struct SecurityState {
     pub pool: PgPool,
     pub origin: String,
     pub cursor_signing_key: Vec<u8>,
+    pub operator_mfa_key: [u8; 32],
 }
 
 pub struct SessionTokens {
@@ -125,9 +126,7 @@ pub async fn require_session(
         .map_err(|_| internal_error("invalid session ID"))?;
     let role = match identity.2.as_str() {
         "user" => Role::User,
-        "moderator" => Role::Moderator,
-        "administrator" => Role::Administrator,
-        _ => return Err(internal_error("invalid role")),
+        _ => return Err(internal_error("invalid social-account role")),
     };
 
     enforce_csrf(request.method(), request.headers(), &state.origin)?;

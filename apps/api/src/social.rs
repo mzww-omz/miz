@@ -1,8 +1,9 @@
 use crate::{
     api::Problem,
-    authorization::{Principal, Role},
+    authorization::Principal,
     pagination::{self, PageQuery},
     posts::{PostPage, PostRow, post_response},
+    relationships::lock_user_pair,
     security::SecurityState,
 };
 use axum::{
@@ -47,10 +48,12 @@ pub async fn follow_user(
         ));
     }
     let mut transaction = state.pool.begin().await.map_err(internal_error)?;
+    lock_user_pair(&mut transaction, principal.user_id, target_id).await?;
     let privacy: String = sqlx::query_scalar(
-        "SELECT privacy FROM users WHERE id = $1 AND status = 'active' FOR SHARE",
+        "SELECT privacy FROM users WHERE id = $1 AND miz_relationship_allowed($2, id) FOR SHARE",
     )
     .bind(target_id.to_bytes().to_vec())
+    .bind(principal.user_id.to_bytes().to_vec())
     .fetch_optional(&mut *transaction)
     .await
     .map_err(internal_error)?
@@ -106,6 +109,7 @@ pub async fn list_follow_requests(
 ) -> Result<Json<FollowRelationshipList>, Problem> {
     relationship_list(
         &state,
+        principal,
         "followee_id = $1 AND status = 'pending'",
         principal.user_id,
     )
@@ -139,9 +143,14 @@ pub async fn list_followers(
     Path(user_id): Path<UserId>,
 ) -> Result<Json<FollowRelationshipList>, Problem> {
     ensure_relationships_visible(&state, principal, user_id).await?;
-    relationship_list(&state, "followee_id = $1 AND status = 'accepted'", user_id)
-        .await
-        .map(Json)
+    relationship_list(
+        &state,
+        principal,
+        "followee_id = $1 AND status = 'accepted'",
+        user_id,
+    )
+    .await
+    .map(Json)
 }
 
 pub async fn list_following(
@@ -150,9 +159,14 @@ pub async fn list_following(
     Path(user_id): Path<UserId>,
 ) -> Result<Json<FollowRelationshipList>, Problem> {
     ensure_relationships_visible(&state, principal, user_id).await?;
-    relationship_list(&state, "follower_id = $1 AND status = 'accepted'", user_id)
-        .await
-        .map(Json)
+    relationship_list(
+        &state,
+        principal,
+        "follower_id = $1 AND status = 'accepted'",
+        user_id,
+    )
+    .await
+    .map(Json)
 }
 
 pub async fn home_timeline(
@@ -171,18 +185,16 @@ pub async fn home_timeline(
          to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          to_char(p.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          CASE WHEN p.edited_at IS NULL THEN NULL ELSE to_char(p.edited_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') END \
-         FROM posts p JOIN users author ON author.id = p.author_id AND author.status = 'active' \
+         FROM posts p \
          WHERE p.reply_to_post_id IS NULL AND p.state = 'published' \
          AND (p.author_id = $1 OR EXISTS (SELECT 1 FROM follow_relationships f \
               WHERE f.follower_id = $1 AND f.followee_id = p.author_id AND f.status = 'accepted')) \
-         AND ((p.effective_visibility = 'public' AND author.privacy = 'public') OR p.author_id = $1 \
-              OR EXISTS (SELECT 1 FROM follow_relationships f WHERE f.follower_id = $1 AND f.followee_id = p.author_id AND f.status = 'accepted') \
-              OR $2) \
-         AND ($3::timestamptz IS NULL OR (p.created_at, p.id) < ($3::timestamptz, $4)) \
-         ORDER BY p.created_at DESC, p.id DESC LIMIT $5",
+         AND miz_post_visible($1, p.id) \
+         AND NOT EXISTS (SELECT 1 FROM user_mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id) \
+         AND ($2::timestamptz IS NULL OR (p.created_at, p.id) < ($2::timestamptz, $3)) \
+         ORDER BY p.created_at DESC, p.id DESC LIMIT $4",
     )
     .bind(principal.user_id.to_bytes().to_vec())
-    .bind(is_privileged(principal))
     .bind(cursor.as_ref().map(|cursor| cursor.created_at.as_str()))
     .bind(cursor.as_ref().map(|cursor| cursor.id.to_bytes().to_vec()))
     .bind(limit + 1)
@@ -220,18 +232,27 @@ async fn transition_request(
     next_status: &str,
 ) -> Result<FollowRelationshipResponse, Problem> {
     let mut transaction = state.pool.begin().await.map_err(internal_error)?;
-    let current: (Vec<u8>, String) = sqlx::query_as(
-        "SELECT followee_id, status FROM follow_relationships WHERE id = $1 FOR UPDATE",
+    let pair: (Vec<u8>, Vec<u8>) = sqlx::query_as(
+        "SELECT follower_id, followee_id FROM follow_relationships WHERE id = $1 AND followee_id = $2",
     )
     .bind(relationship_id.to_bytes().to_vec())
+    .bind(principal.user_id.to_bytes().to_vec())
     .fetch_optional(&mut *transaction)
     .await
     .map_err(internal_error)?
     .ok_or_else(resource_not_found)?;
-    if user_id(&current.0)? != principal.user_id {
-        return Err(resource_not_found());
-    }
-    if current.1 != "pending" {
+    lock_user_pair(&mut transaction, user_id(&pair.0)?, user_id(&pair.1)?).await?;
+    let current: String = sqlx::query_scalar(
+        "SELECT status FROM follow_relationships \
+         WHERE id = $1 AND followee_id = $2 AND miz_relationship_allowed($2, follower_id) FOR UPDATE",
+    )
+    .bind(relationship_id.to_bytes().to_vec())
+    .bind(principal.user_id.to_bytes().to_vec())
+    .fetch_optional(&mut *transaction)
+    .await
+    .map_err(internal_error)?
+    .ok_or_else(resource_not_found)?;
+    if current != "pending" {
         return Err(Problem::new(
             StatusCode::CONFLICT,
             "invalid_state_transition",
@@ -256,6 +277,7 @@ async fn transition_request(
 // ponytail: relationship lists are unpaginated for MVP; add signed keyset cursors when response size becomes material.
 async fn relationship_list(
     state: &SecurityState,
+    principal: Principal,
     condition: &str,
     user_id: UserId,
 ) -> Result<FollowRelationshipList, Problem> {
@@ -263,10 +285,14 @@ async fn relationship_list(
         "SELECT id, follower_id, followee_id, status, \
          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') \
-         FROM follow_relationships WHERE {condition} ORDER BY created_at DESC, id DESC"
+         FROM follow_relationships WHERE {condition} \
+         AND miz_relationship_allowed($2, follower_id) \
+         AND miz_relationship_allowed($2, followee_id) \
+         ORDER BY created_at DESC, id DESC"
     );
     let rows: Vec<RelationshipRow> = sqlx::query_as(&sql)
         .bind(user_id.to_bytes().to_vec())
+        .bind(principal.user_id.to_bytes().to_vec())
         .fetch_all(&state.pool)
         .await
         .map_err(internal_error)?;
@@ -285,18 +311,13 @@ async fn ensure_relationships_visible(
     principal: Principal,
     user_id: UserId,
 ) -> Result<(), Problem> {
-    let visible: bool = sqlx::query_scalar(
-        "SELECT privacy = 'public' OR id = $2 OR $3 OR EXISTS ( \
-         SELECT 1 FROM follow_relationships f WHERE f.follower_id = $2 AND f.followee_id = users.id AND f.status = 'accepted') \
-         FROM users WHERE id = $1 AND status = 'active'",
-    )
-    .bind(user_id.to_bytes().to_vec())
-    .bind(principal.user_id.to_bytes().to_vec())
-    .bind(is_privileged(principal))
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(internal_error)?
-    .ok_or_else(target_not_visible)?;
+    let visible: bool = sqlx::query_scalar("SELECT miz_profile_visible($1, $2)")
+        .bind(principal.user_id.to_bytes().to_vec())
+        .bind(user_id.to_bytes().to_vec())
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(target_not_visible)?;
     if visible {
         Ok(())
     } else {
@@ -313,10 +334,6 @@ fn relationship_response(row: RelationshipRow) -> Result<FollowRelationshipRespo
         created_at: row.4,
         updated_at: row.5,
     })
-}
-
-fn is_privileged(principal: Principal) -> bool {
-    matches!(principal.role, Role::Moderator | Role::Administrator)
 }
 
 fn relationship_id(bytes: &[u8]) -> Result<FollowRelationshipId, Problem> {
@@ -386,6 +403,7 @@ mod tests {
             pool: pool.clone(),
             origin: "https://m1z.jp".to_owned(),
             cursor_signing_key: vec![9; 32],
+            operator_mfa_key: [9; 32],
         };
         let actor = UserId::new().unwrap();
         let public_user = UserId::new().unwrap();

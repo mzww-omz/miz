@@ -79,6 +79,360 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/auth/login:
+    post:
+      operationId: operatorLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperatorLoginRequest' }
+      responses:
+        '200':
+          description: Operator signed in with MFA
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Operator' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/me:
+    get:
+      operationId: getCurrentOperator
+      security:
+        - operatorSessionCookie: []
+      responses:
+        '200':
+          description: Current operator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Operator' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/reports:
+    get:
+      operationId: listAdminReports
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [received, inReview, actioned, noAction], default: received }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Moderation report queue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReportList' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/reports/{reportId}:
+    get:
+      operationId: getAdminReport
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '200':
+          description: Report with immutable evidence
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReport' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: reviewAdminReport
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewReportRequest' }
+      responses:
+        '200':
+          description: Updated report review state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReport' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/auth/logout:
+    delete:
+      operationId: operatorLogout
+      security:
+        - operatorSessionCookie: []
+      responses:
+        '204': { description: Operator session revoked }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/auth/mfa/enroll:
+    post:
+      operationId: enrollOperatorMfa
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperatorEnrollmentRequest' }
+      responses:
+        '204': { description: MFA enrollment completed }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/auth/mfa/challenge:
+    post:
+      operationId: confirmOperatorMfa
+      security:
+        - operatorSessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperatorMfaRequest' }
+      responses:
+        '204': { description: MFA freshness renewed }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/auth/mfa/recovery-codes:
+    post:
+      operationId: rotateOperatorRecoveryCodes
+      security:
+        - operatorSessionCookie: []
+      responses:
+        '200':
+          description: New one-time recovery codes; returned once
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecoveryCodes' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/sessions:
+    get:
+      operationId: listOperatorSessions
+      security:
+        - operatorSessionCookie: []
+      responses:
+        '200':
+          description: Active operator sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/OperatorSession' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/sessions/{sessionId}:
+    delete:
+      operationId: revokeOperatorSession
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ObjectId' }
+      responses:
+        '204': { description: Operator session revoked }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/operators:
+    post:
+      operationId: createOperator
+      security:
+        - operatorSessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOperatorRequest' }
+      responses:
+        '201':
+          description: Pending operator and one-time MFA enrollment material
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperatorEnrollment' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/operators/{operatorId}/roles:
+    put:
+      operationId: replaceOperatorRoles
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - name: operatorId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ObjectId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceOperatorRolesRequest' }
+      responses:
+        '204': { description: Operator roles replaced }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/users/{userId}:
+    get:
+      operationId: getAdminBasicAccount
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Basic account information without private content
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BasicAccount' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/users/{userId}/restrictions:
+    post:
+      operationId: applyUserRestriction
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestrictionRequest' }
+      responses:
+        '201':
+          description: Applied restriction
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restriction' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/appeals:
+    post:
+      operationId: createModerationAppeal
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAppealRequest' }
+      responses:
+        '201':
+          description: Appeal created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Appeal' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/appeals:
+    get:
+      operationId: listModerationAppeals
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, upheld, overturned], default: pending }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Appeal review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminAppeal' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/appeals/{appealId}:
+    patch:
+      operationId: reviewModerationAppeal
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - name: appealId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ObjectId' }
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewAppealRequest' }
+      responses:
+        '200':
+          description: Reviewed appeal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Appeal' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+  /api/v1/admin/audit-logs:
+    get:
+      operationId: readAuditLog
+      security:
+        - operatorSessionCookie: []
+      parameters:
+        - { name: targetType, in: query, required: true, schema: { type: string, enum: [user, post, report, operator, appeal] } }
+        - { name: targetId, in: query, required: true, schema: { $ref: '#/components/schemas/ObjectId' } }
+        - { name: from, in: query, required: true, schema: { $ref: '#/components/schemas/Timestamp' } }
+        - { name: to, in: query, required: true, schema: { $ref: '#/components/schemas/Timestamp' } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+      responses:
+        '200':
+          description: Time- and subject-bounded audit records
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditEntry' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /api/v1/sessions:
     get:
       operationId: listSessions
@@ -162,6 +516,62 @@ paths:
         '409': { $ref: '#/components/responses/Problem' }
         '412': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/me/deletion-requests:
+    post:
+      operationId: requestAccountDeletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestAccountDeletion' }
+      responses:
+        '201':
+          description: Account deletion requested and all sessions revoked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionRequest' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/me/deletion-requests/current/cancel:
+    post:
+      operationId: cancelAccountDeletion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestoreAccountRequest' }
+      responses:
+        '200':
+          description: Pending account deletion cancelled after identity verification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionRequest' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/me/deletion-requests/current/restore:
+    post:
+      operationId: restoreAccount
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestoreAccountRequest' }
+      responses:
+        '200':
+          description: Account restored after identity verification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountDeletionRequest' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
   /api/v1/posts:
     post:
@@ -273,6 +683,69 @@ paths:
         '409': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/posts/{postId}/reports:
+    post:
+      operationId: createReport
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReportRequest' }
+      responses:
+        '200':
+          description: Existing unresolved report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '201':
+          description: Created report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/reports/{reportId}:
+    get:
+      operationId: getReport
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '200':
+          description: Report status visible to its reporter
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateReport
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateReportRequest' }
+      responses:
+        '200':
+          description: Updated unresolved report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/users/{targetUserId}/follow:
     put:
       operationId: followUser
@@ -295,6 +768,48 @@ paths:
         - $ref: '#/components/parameters/TargetUserId'
       responses:
         '204': { description: Relationship removed }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{targetUserId}/block:
+    post:
+      operationId: blockUser
+      parameters:
+        - $ref: '#/components/parameters/TargetUserId'
+      responses:
+        '204': { description: User blocked and Follow relationships removed }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: unblockUser
+      parameters:
+        - $ref: '#/components/parameters/TargetUserId'
+      responses:
+        '204': { description: Block removed }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{targetUserId}/mute:
+    post:
+      operationId: muteUser
+      parameters:
+        - $ref: '#/components/parameters/TargetUserId'
+      responses:
+        '204': { description: User muted }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: unmuteUser
+      parameters:
+        - $ref: '#/components/parameters/TargetUserId'
+      responses:
+        '204': { description: Mute removed }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
@@ -390,9 +905,18 @@ components:
       type: apiKey
       in: cookie
       name: __Host-miz_session
+    operatorSessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-miz_operator_session
   parameters:
     PostId:
       name: postId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    ReportId:
+      name: reportId
       in: path
       required: true
       schema: { $ref: '#/components/schemas/ObjectId' }
@@ -464,6 +988,240 @@ components:
       properties:
         username: { $ref: '#/components/schemas/Handle' }
         password: { type: string, minLength: 12, maxLength: 128, format: password }
+    RequestAccountDeletion:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password: { type: string, minLength: 1, maxLength: 128, format: password }
+    RestoreAccountRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { $ref: '#/components/schemas/Handle' }
+        password: { type: string, minLength: 1, maxLength: 128, format: password }
+    AccountDeletionRequest:
+      type: object
+      required: [id, status, requestedAt, restoreUntil]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        status: { type: string, enum: [pending, cancelled, purging, purged, restored] }
+        requestedAt: { $ref: '#/components/schemas/Timestamp' }
+        restoreUntil: { $ref: '#/components/schemas/Timestamp' }
+    OperatorLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      oneOf:
+        - required: [totpCode]
+        - required: [recoveryCode]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 64 }
+        password: { type: string, minLength: 12, maxLength: 128, format: password }
+        totpCode: { type: string, pattern: '^[0-9]{6}$' }
+        recoveryCode: { type: string, minLength: 1, maxLength: 128 }
+    Operator:
+      type: object
+      required: [id, username, roles, recentMfa]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        username: { type: string }
+        recentMfa: { type: boolean }
+        roles:
+          type: array
+          minItems: 1
+          items: { type: string, enum: [support, moderator, seniorModerator, administrator, auditor] }
+    OperatorMfaRequest:
+      type: object
+      additionalProperties: false
+      oneOf:
+        - required: [totpCode]
+        - required: [recoveryCode]
+      properties:
+        totpCode: { type: string, pattern: '^[0-9]{6}$' }
+        recoveryCode: { type: string, minLength: 1, maxLength: 128 }
+    OperatorEnrollmentRequest:
+      type: object
+      additionalProperties: false
+      required: [enrollmentToken, totpCode]
+      properties:
+        enrollmentToken: { type: string, minLength: 32, maxLength: 128 }
+        totpCode: { type: string, pattern: '^[0-9]{6}$' }
+    RecoveryCodes:
+      type: object
+      required: [recoveryCodes]
+      properties:
+        recoveryCodes:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items: { type: string }
+    OperatorSession:
+      type: object
+      required: [id, current, lastSeenAt, idleExpiresAt, absoluteExpiresAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        current: { type: boolean }
+        lastSeenAt: { $ref: '#/components/schemas/Timestamp' }
+        idleExpiresAt: { $ref: '#/components/schemas/Timestamp' }
+        absoluteExpiresAt: { $ref: '#/components/schemas/Timestamp' }
+    CreateOperatorRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password, roles]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 64 }
+        password: { type: string, minLength: 12, maxLength: 128, format: password }
+        roles:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [support, moderator, seniorModerator, administrator, auditor] }
+    OperatorEnrollment:
+      type: object
+      required: [id, username, roles, enrollmentToken, provisioningUri, recoveryCodes]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        username: { type: string }
+        roles:
+          type: array
+          items: { type: string, enum: [support, moderator, seniorModerator, administrator, auditor] }
+        enrollmentToken: { type: string }
+        provisioningUri: { type: string, format: uri }
+        recoveryCodes:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items: { type: string }
+    ReplaceOperatorRolesRequest:
+      type: object
+      additionalProperties: false
+      required: [roles, reason]
+      properties:
+        roles:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [support, moderator, seniorModerator, administrator, auditor] }
+        reason: { type: string, minLength: 1, maxLength: 8192 }
+    BasicAccount:
+      type: object
+      required: [id, handle, displayName, status, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        handle: { $ref: '#/components/schemas/Handle' }
+        displayName: { type: string }
+        status: { type: string, enum: [active, suspended] }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+    RestrictionRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, reason]
+      properties:
+        kind: { type: string, enum: [featureRestriction, temporarySuspension, permanentSuspension] }
+        feature:
+          oneOf:
+            - { type: string, minLength: 1, maxLength: 64 }
+            - { type: 'null' }
+        expiresAt:
+          oneOf:
+            - { $ref: '#/components/schemas/Timestamp' }
+            - { type: 'null' }
+        reason: { type: string, minLength: 1, maxLength: 8192 }
+        reportId:
+          oneOf:
+            - { $ref: '#/components/schemas/ObjectId' }
+            - { type: 'null' }
+    Restriction:
+      type: object
+      required: [id, actionId, userId, kind, feature, expiresAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        actionId: { $ref: '#/components/schemas/ObjectId' }
+        userId: { $ref: '#/components/schemas/ObjectId' }
+        kind: { type: string, enum: [featureRestriction, temporarySuspension, permanentSuspension] }
+        feature:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        expiresAt:
+          oneOf:
+            - { $ref: '#/components/schemas/Timestamp' }
+            - { type: 'null' }
+    CreateAppealRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password, actionId, explanation]
+      properties:
+        username: { $ref: '#/components/schemas/Handle' }
+        password: { type: string, minLength: 1, maxLength: 128, format: password }
+        actionId: { $ref: '#/components/schemas/ObjectId' }
+        explanation: { type: string, minLength: 1, maxLength: 8192 }
+    ReviewAppealRequest:
+      type: object
+      additionalProperties: false
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [upheld, overturned] }
+        reason: { type: string, minLength: 1, maxLength: 8192 }
+    Appeal:
+      type: object
+      required: [id, actionId, status, version, createdAt, reviewedAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        actionId: { $ref: '#/components/schemas/ObjectId' }
+        status: { type: string, enum: [pending, upheld, overturned] }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        reviewedAt:
+          oneOf:
+            - { $ref: '#/components/schemas/Timestamp' }
+            - { type: 'null' }
+    AdminAppeal:
+      type: object
+      required: [id, actionId, appellantUserId, explanation, status, version, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        actionId: { $ref: '#/components/schemas/ObjectId' }
+        appellantUserId: { $ref: '#/components/schemas/ObjectId' }
+        explanation: { type: string }
+        status: { type: string, enum: [pending, upheld, overturned] }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+    AuditEntry:
+      type: object
+      required: [id, actorOperatorId, eventType, targetType, targetId, reason, beforeState, afterState, requestId, reportId, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        actorOperatorId:
+          oneOf:
+            - { $ref: '#/components/schemas/ObjectId' }
+            - { type: 'null' }
+        eventType: { type: string }
+        targetType: { type: string }
+        targetId: { $ref: '#/components/schemas/ObjectId' }
+        reason:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        beforeState:
+          oneOf:
+            - { type: object, additionalProperties: true }
+            - { type: 'null' }
+        afterState:
+          oneOf:
+            - { type: object, additionalProperties: true }
+            - { type: 'null' }
+        requestId:
+          oneOf:
+            - { $ref: '#/components/schemas/ObjectId' }
+            - { type: 'null' }
+        reportId:
+          oneOf:
+            - { $ref: '#/components/schemas/ObjectId' }
+            - { type: 'null' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
     User:
       type: object
       required: [id, handle, displayName, bio, privacy, version, createdAt, updatedAt]
@@ -530,6 +1288,84 @@ components:
           oneOf:
             - { $ref: '#/components/schemas/Timestamp' }
             - { type: 'null' }
+    ReportReason:
+      type: string
+      enum: [spam, harassment, hatefulContent, violence, sexualContent, illegalOrDangerousTrade, personalInformation, copyright, other]
+    CreateReportRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        explanation:
+          type: string
+          minLength: 1
+          description: Required for other; at most 500 Unicode grapheme clusters and 8192 UTF-8 bytes.
+    UpdateReportRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        explanation:
+          type: string
+          minLength: 1
+          description: At most 500 Unicode grapheme clusters and 8192 UTF-8 bytes.
+    Report:
+      type: object
+      required: [id, targetId, targetType, reason, explanation, status, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        targetId: { $ref: '#/components/schemas/ObjectId' }
+        targetType: { type: string, enum: [post, reply] }
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        explanation:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        status: { type: string, enum: [received, inReview, actioned, noAction] }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    ReviewReportRequest:
+      type: object
+      additionalProperties: false
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [inReview, actioned, noAction] }
+        reason: { type: string, minLength: 1, maxLength: 8192 }
+        removeContent: { type: boolean, default: false }
+    AdminReport:
+      type: object
+      required: [id, targetId, targetType, authorId, reason, explanation, status, version, createdAt, updatedAt, evidenceContent, targetVersion, targetCreatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        reporterId:
+          oneOf:
+            - { $ref: '#/components/schemas/ObjectId' }
+            - { type: 'null' }
+        targetId: { $ref: '#/components/schemas/ObjectId' }
+        targetType: { type: string, enum: [post, reply] }
+        authorId: { $ref: '#/components/schemas/ObjectId' }
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        explanation:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        status: { type: string, enum: [received, inReview, actioned, noAction] }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+        evidenceContent: { type: string }
+        targetVersion: { type: integer, format: int64, minimum: 1 }
+        targetCreatedAt: { $ref: '#/components/schemas/Timestamp' }
+    AdminReportList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminReport' }
     FollowRelationship:
       type: object
       required: [id, followerId, followeeId, status, createdAt, updatedAt]
@@ -570,5 +1406,5 @@ components:
         detail: { type: string }
         code:
           type: string
-          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, invalid_credentials, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired, cannot_follow_self, invalid_state_transition, parent_not_visible, invalid_cursor, cursor_expired, target_not_visible]
+          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, invalid_credentials, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired, cannot_follow_self, invalid_state_transition, parent_not_visible, invalid_cursor, cursor_expired, target_not_visible, cannot_block_self, cannot_mute_self, cannot_report_own_content, report_reason_required, report_already_exists, report_not_editable, invalid_report_transition, operator_auth_required, operator_mfa_required, operator_mfa_stale, operator_permission_denied, appeal_reviewer_conflict, deletion_already_pending, deletion_not_pending, restoration_window_expired, purge_in_progress, operator_username_unavailable, appeal_already_exists]
         requestId: { type: string }

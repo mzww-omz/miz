@@ -185,7 +185,7 @@ fn verify_password(password: String, stored_hash: Option<String>) -> Result<bool
     }
 }
 
-fn require_same_origin(headers: &HeaderMap, expected: &str) -> Result<(), Problem> {
+pub(crate) fn require_same_origin(headers: &HeaderMap, expected: &str) -> Result<(), Problem> {
     let valid = headers
         .get(header::ORIGIN)
         .and_then(|value| value.to_str().ok())
@@ -276,6 +276,7 @@ mod tests {
             pool,
             origin: "http://localhost:8080".to_owned(),
             cursor_signing_key: vec![7; 32],
+            operator_mfa_key: [7; 32],
         };
         let username: Handle = format!("u_{}", &UserId::new().unwrap().to_string()[..12])
             .parse()

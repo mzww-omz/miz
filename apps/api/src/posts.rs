@@ -1,7 +1,8 @@
 use crate::{
     api::{Problem, parse_if_match},
-    authorization::{Action, Principal, Role, authorize},
+    authorization::{Action, Principal, authorize},
     pagination::{self, PageQuery},
+    relationships::lock_user_pair,
     security::SecurityState,
 };
 use axum::{
@@ -144,6 +145,19 @@ async fn create_content(
     .map_err(internal_error)?;
     let parent_visibility = match parent_id {
         Some(parent_id) => {
+            let parent_author: Vec<u8> =
+                sqlx::query_scalar("SELECT author_id FROM posts WHERE id = $1")
+                    .bind(parent_id.to_bytes().to_vec())
+                    .fetch_optional(&mut *transaction)
+                    .await
+                    .map_err(internal_error)?
+                    .ok_or_else(not_found)?;
+            lock_user_pair(
+                &mut transaction,
+                principal.user_id,
+                user_id(&parent_author)?,
+            )
+            .await?;
             Some(load_reply_parent(&mut transaction, parent_id, principal, false).await?)
         }
         None => None,
@@ -214,17 +228,13 @@ pub async fn list_replies(
          to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          to_char(p.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          CASE WHEN p.edited_at IS NULL THEN NULL ELSE to_char(p.edited_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') END \
-         FROM posts p JOIN users author ON author.id = p.author_id AND author.status = 'active' \
-         WHERE p.reply_to_post_id = $1 AND p.state IN ('published', 'tombstone') \
-         AND (author.privacy = 'public' OR p.author_id = $2 \
-              OR EXISTS (SELECT 1 FROM follow_relationships f WHERE f.follower_id = $2 AND f.followee_id = p.author_id AND f.status = 'accepted') \
-              OR $3) \
-         AND ($4::timestamptz IS NULL OR (p.created_at, p.id) > ($4::timestamptz, $5)) \
-         ORDER BY p.created_at ASC, p.id ASC LIMIT $6",
+         FROM posts p \
+         WHERE p.reply_to_post_id = $1 AND miz_post_visible($2, p.id) \
+         AND ($3::timestamptz IS NULL OR (p.created_at, p.id) > ($3::timestamptz, $4)) \
+         ORDER BY p.created_at ASC, p.id ASC LIMIT $5",
     )
     .bind(parent_id.to_bytes().to_vec())
     .bind(principal.user_id.to_bytes().to_vec())
-    .bind(is_privileged(principal))
     .bind(cursor.as_ref().map(|cursor| cursor.created_at.as_str()))
     .bind(cursor.as_ref().map(|cursor| cursor.id.to_bytes().to_vec()))
     .bind(limit + 1)
@@ -375,7 +385,7 @@ pub async fn delete_post(
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
-async fn load_post(
+pub(crate) async fn load_post(
     connection: &mut sqlx::PgConnection,
     post_id: PostId,
     principal: Principal,
@@ -385,21 +395,10 @@ async fn load_post(
          to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          to_char(p.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), \
          CASE WHEN p.edited_at IS NULL THEN NULL ELSE to_char(p.edited_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') END \
-         FROM posts p JOIN users author ON author.id = p.author_id AND author.status = 'active' \
-         WHERE p.id = $1 AND p.state IN ('published', 'tombstone') \
-         AND ((author.privacy = 'public' AND (p.reply_to_post_id IS NOT NULL OR p.effective_visibility = 'public')) OR p.author_id = $2 \
-              OR EXISTS (SELECT 1 FROM follow_relationships f WHERE f.follower_id = $2 AND f.followee_id = p.author_id AND f.status = 'accepted') \
-              OR $3) \
-         AND (p.reply_to_post_id IS NULL OR EXISTS ( \
-             SELECT 1 FROM posts parent JOIN users parent_author ON parent_author.id = parent.author_id AND parent_author.status = 'active' \
-             WHERE parent.id = p.reply_to_post_id AND parent.state IN ('published', 'tombstone') \
-             AND ((parent.effective_visibility = 'public' AND parent_author.privacy = 'public') OR parent.author_id = $2 \
-                  OR EXISTS (SELECT 1 FROM follow_relationships f WHERE f.follower_id = $2 AND f.followee_id = parent.author_id AND f.status = 'accepted') \
-                  OR $3)))",
+         FROM posts p WHERE p.id = $1 AND miz_post_visible($2, p.id)",
     )
     .bind(post_id.to_bytes().to_vec())
     .bind(principal.user_id.to_bytes().to_vec())
-    .bind(is_privileged(principal))
     .fetch_optional(connection)
     .await
     .map_err(internal_error)?
@@ -415,16 +414,12 @@ async fn load_reply_parent(
 ) -> Result<String, Problem> {
     sqlx::query_scalar(
         "SELECT p.effective_visibility FROM posts p \
-         JOIN users author ON author.id = p.author_id AND author.status = 'active' \
          WHERE p.id = $1 AND p.reply_to_post_id IS NULL \
-         AND (p.state = 'published' OR ($4 AND p.state = 'tombstone')) \
-         AND ((p.effective_visibility = 'public' AND author.privacy = 'public') OR p.author_id = $2 \
-              OR EXISTS (SELECT 1 FROM follow_relationships f WHERE f.follower_id = $2 AND f.followee_id = p.author_id AND f.status = 'accepted') \
-              OR $3) FOR SHARE OF p",
+         AND (p.state = 'published' OR ($3 AND p.state = 'tombstone')) \
+         AND miz_post_visible($2, p.id) FOR SHARE OF p",
     )
     .bind(parent_id.to_bytes().to_vec())
     .bind(principal.user_id.to_bytes().to_vec())
-    .bind(is_privileged(principal))
     .bind(allow_tombstone)
     .fetch_optional(connection)
     .await
@@ -451,10 +446,6 @@ pub(crate) fn post_response(row: PostRow) -> Result<PostResponse, Problem> {
         updated_at: row.8,
         edited_at: row.9,
     })
-}
-
-fn is_privileged(principal: Principal) -> bool {
-    matches!(principal.role, Role::Moderator | Role::Administrator)
 }
 
 fn idempotency_key(headers: &HeaderMap) -> Result<&str, Problem> {
@@ -533,6 +524,7 @@ mod tests {
             pool: pool.clone(),
             origin: "https://m1z.jp".to_owned(),
             cursor_signing_key: vec![7; 32],
+            operator_mfa_key: [7; 32],
         };
         let author = UserId::new().unwrap();
         let stranger = UserId::new().unwrap();

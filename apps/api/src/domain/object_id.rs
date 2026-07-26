@@ -118,6 +118,10 @@ object_id!(
 );
 object_id!(PostId);
 object_id!(FollowRelationshipId);
+object_id!(AccountDeletionRequestId);
+object_id!(AppealId);
+object_id!(OperatorId);
+object_id!(RestrictionId);
 object_id!(ReportId);
 object_id!(RequestId);
 object_id!(SessionId);

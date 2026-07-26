@@ -1,12 +1,18 @@
+mod account_deletion;
+mod administration;
 pub mod api;
 mod application;
 pub mod authorization;
 mod federation;
+mod moderation;
 mod observability;
+mod operators;
 mod pagination;
 mod posts;
 mod profile;
 mod registration;
+mod relationships;
+mod reports;
 pub mod security;
 mod sessions;
 mod social;
@@ -46,10 +52,17 @@ async fn main() {
         cursor_signing_key.len() >= 32,
         "CURSOR_SIGNING_KEY must contain at least 32 bytes"
     );
+    let operator_mfa_secret = std::env::var("OPERATOR_MFA_ENCRYPTION_KEY")
+        .expect("OPERATOR_MFA_ENCRYPTION_KEY must be set");
+    assert!(
+        operator_mfa_secret.len() >= 32,
+        "OPERATOR_MFA_ENCRYPTION_KEY must contain at least 32 bytes"
+    );
     let state = SecurityState {
         pool,
         origin: std::env::var("APP_ORIGIN").expect("APP_ORIGIN must be set"),
         cursor_signing_key,
+        operator_mfa_key: security::hash(operator_mfa_secret.as_bytes()),
     };
     let app = app(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
@@ -59,6 +72,59 @@ async fn main() {
 }
 
 fn app(state: SecurityState) -> Router {
+    let admin_api = Router::new()
+        .route("/api/v1/admin/me", get(operators::current_operator))
+        .route("/api/v1/admin/reports", get(moderation::list_reports))
+        .route(
+            "/api/v1/admin/operators",
+            axum::routing::post(administration::create_operator),
+        )
+        .route(
+            "/api/v1/admin/operators/{operatorId}/roles",
+            axum::routing::put(administration::replace_operator_roles),
+        )
+        .route(
+            "/api/v1/admin/users/{userId}",
+            get(administration::get_basic_account),
+        )
+        .route(
+            "/api/v1/admin/users/{userId}/restrictions",
+            axum::routing::post(administration::apply_restriction),
+        )
+        .route("/api/v1/admin/appeals", get(administration::list_appeals))
+        .route(
+            "/api/v1/admin/appeals/{appealId}",
+            axum::routing::patch(administration::review_appeal),
+        )
+        .route(
+            "/api/v1/admin/audit-logs",
+            get(administration::read_audit_log),
+        )
+        .route(
+            "/api/v1/admin/auth/mfa/challenge",
+            axum::routing::post(operators::confirm_mfa),
+        )
+        .route(
+            "/api/v1/admin/auth/mfa/recovery-codes",
+            axum::routing::post(operators::rotate_recovery_codes),
+        )
+        .route("/api/v1/admin/sessions", get(operators::list_sessions))
+        .route(
+            "/api/v1/admin/sessions/{sessionId}",
+            axum::routing::delete(operators::revoke_session),
+        )
+        .route(
+            "/api/v1/admin/reports/{reportId}",
+            get(moderation::get_report).patch(moderation::review_report),
+        )
+        .route(
+            "/api/v1/admin/auth/logout",
+            axum::routing::delete(operators::logout),
+        )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            operators::require_operator_session,
+        ));
     let protected_api = Router::new()
         .route(
             "/users/me",
@@ -76,8 +142,24 @@ fn app(state: SecurityState) -> Router {
             get(posts::list_replies).post(posts::create_reply),
         )
         .route(
+            "/posts/{postId}/reports",
+            axum::routing::post(reports::create_report),
+        )
+        .route(
+            "/reports/{reportId}",
+            get(reports::get_report).patch(reports::update_report),
+        )
+        .route(
             "/users/{targetUserId}/follow",
             axum::routing::put(social::follow_user).delete(social::unfollow_user),
+        )
+        .route(
+            "/users/{targetUserId}/block",
+            axum::routing::post(relationships::block_user).delete(relationships::unblock_user),
+        )
+        .route(
+            "/users/{targetUserId}/mute",
+            axum::routing::post(relationships::mute_user).delete(relationships::unmute_user),
         )
         .route("/follow-requests", get(social::list_follow_requests))
         .route(
@@ -103,6 +185,10 @@ fn app(state: SecurityState) -> Router {
             "/sessions/{sessionId}",
             axum::routing::delete(sessions::revoke_session),
         )
+        .route(
+            "/users/me/deletion-requests",
+            axum::routing::post(account_deletion::request_deletion),
+        )
         .fallback(api::not_found)
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -118,6 +204,27 @@ fn app(state: SecurityState) -> Router {
             "/api/v1/auth/login",
             axum::routing::post(registration::login),
         )
+        .route(
+            "/api/v1/admin/auth/login",
+            axum::routing::post(operators::login),
+        )
+        .route(
+            "/api/v1/admin/auth/mfa/enroll",
+            axum::routing::post(operators::enroll_mfa),
+        )
+        .route(
+            "/api/v1/appeals",
+            axum::routing::post(administration::create_appeal),
+        )
+        .route(
+            "/api/v1/users/me/deletion-requests/current/cancel",
+            axum::routing::post(account_deletion::cancel_deletion),
+        )
+        .route(
+            "/api/v1/users/me/deletion-requests/current/restore",
+            axum::routing::post(account_deletion::restore_account),
+        )
+        .merge(admin_api)
         .route("/readyz", get(ready))
         .route("/openapi.json", get(api::openapi))
         .route("/metrics", get(observability::metrics))
@@ -160,6 +267,7 @@ mod tests {
             pool,
             origin: "https://m1z.jp".to_owned(),
             cursor_signing_key: vec![7; 32],
+            operator_mfa_key: [7; 32],
         })
         .oneshot(
             Request::get("/api/v1/unlisted")
@@ -210,6 +318,7 @@ mod tests {
             pool,
             origin: "https://m1z.jp".to_owned(),
             cursor_signing_key: vec![7; 32],
+            operator_mfa_key: [7; 32],
         });
         let response = app
             .clone()

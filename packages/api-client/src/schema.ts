@@ -84,6 +84,294 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["operatorLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCurrentOperator"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reports/{reportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["reviewAdminReport"];
+        trace?: never;
+    };
+    "/api/v1/admin/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["operatorLogout"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/mfa/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enrollOperatorMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/mfa/challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmOperatorMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/auth/mfa/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rotateOperatorRecoveryCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperatorSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeOperatorSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createOperator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operators/{operatorId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["replaceOperatorRoles"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminBasicAccount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}/restrictions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applyUserRestriction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createModerationAppeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listModerationAppeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/appeals/{appealId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["reviewModerationAppeal"];
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["readAuditLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions": {
         parameters: {
             query?: never;
@@ -148,6 +436,54 @@ export interface paths {
         patch: operations["updateCurrentUser"];
         trace?: never;
     };
+    "/api/v1/users/me/deletion-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestAccountDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/deletion-requests/current/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelAccountDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/deletion-requests/current/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restoreAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/posts": {
         parameters: {
             query?: never;
@@ -196,6 +532,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/posts/{postId}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/{reportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateReport"];
+        trace?: never;
+    };
     "/api/v1/users/{targetUserId}/follow": {
         parameters: {
             query?: never;
@@ -207,6 +575,38 @@ export interface paths {
         put: operations["followUser"];
         post?: never;
         delete: operations["unfollowUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{targetUserId}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["blockUser"];
+        delete: operations["unblockUser"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{targetUserId}/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["muteUser"];
+        delete: operations["unmuteUser"];
         options?: never;
         head?: never;
         patch?: never;
@@ -332,6 +732,148 @@ export interface components {
             /** Format: password */
             password: string;
         };
+        RequestAccountDeletion: {
+            /** Format: password */
+            password: string;
+        };
+        RestoreAccountRequest: {
+            username: components["schemas"]["Handle"];
+            /** Format: password */
+            password: string;
+        };
+        AccountDeletionRequest: {
+            id: components["schemas"]["ObjectId"];
+            /** @enum {string} */
+            status: "pending" | "cancelled" | "purging" | "purged" | "restored";
+            requestedAt: components["schemas"]["Timestamp"];
+            restoreUntil: components["schemas"]["Timestamp"];
+        };
+        OperatorLoginRequest: {
+            username: string;
+            /** Format: password */
+            password: string;
+            totpCode?: string;
+            recoveryCode?: string;
+        } & (unknown | unknown);
+        Operator: {
+            id: components["schemas"]["ObjectId"];
+            username: string;
+            recentMfa: boolean;
+            roles: ("support" | "moderator" | "seniorModerator" | "administrator" | "auditor")[];
+        };
+        OperatorMfaRequest: {
+            totpCode?: string;
+            recoveryCode?: string;
+        } & (unknown | unknown);
+        OperatorEnrollmentRequest: {
+            enrollmentToken: string;
+            totpCode: string;
+        };
+        RecoveryCodes: {
+            recoveryCodes: string[];
+        };
+        OperatorSession: {
+            id: components["schemas"]["ObjectId"];
+            current: boolean;
+            lastSeenAt: components["schemas"]["Timestamp"];
+            idleExpiresAt: components["schemas"]["Timestamp"];
+            absoluteExpiresAt: components["schemas"]["Timestamp"];
+        };
+        CreateOperatorRequest: {
+            username: string;
+            /** Format: password */
+            password: string;
+            roles: ("support" | "moderator" | "seniorModerator" | "administrator" | "auditor")[];
+        };
+        OperatorEnrollment: {
+            id: components["schemas"]["ObjectId"];
+            username: string;
+            roles: ("support" | "moderator" | "seniorModerator" | "administrator" | "auditor")[];
+            enrollmentToken: string;
+            /** Format: uri */
+            provisioningUri: string;
+            recoveryCodes: string[];
+        };
+        ReplaceOperatorRolesRequest: {
+            roles: ("support" | "moderator" | "seniorModerator" | "administrator" | "auditor")[];
+            reason: string;
+        };
+        BasicAccount: {
+            id: components["schemas"]["ObjectId"];
+            handle: components["schemas"]["Handle"];
+            displayName: string;
+            /** @enum {string} */
+            status: "active" | "suspended";
+            createdAt: components["schemas"]["Timestamp"];
+        };
+        RestrictionRequest: {
+            /** @enum {string} */
+            kind: "featureRestriction" | "temporarySuspension" | "permanentSuspension";
+            feature?: string | null;
+            expiresAt?: components["schemas"]["Timestamp"] | null;
+            reason: string;
+            reportId?: components["schemas"]["ObjectId"] | null;
+        };
+        Restriction: {
+            id: components["schemas"]["ObjectId"];
+            actionId: components["schemas"]["ObjectId"];
+            userId: components["schemas"]["ObjectId"];
+            /** @enum {string} */
+            kind: "featureRestriction" | "temporarySuspension" | "permanentSuspension";
+            feature: string | null;
+            expiresAt: components["schemas"]["Timestamp"] | null;
+        };
+        CreateAppealRequest: {
+            username: components["schemas"]["Handle"];
+            /** Format: password */
+            password: string;
+            actionId: components["schemas"]["ObjectId"];
+            explanation: string;
+        };
+        ReviewAppealRequest: {
+            /** @enum {string} */
+            status: "upheld" | "overturned";
+            reason: string;
+        };
+        Appeal: {
+            id: components["schemas"]["ObjectId"];
+            actionId: components["schemas"]["ObjectId"];
+            /** @enum {string} */
+            status: "pending" | "upheld" | "overturned";
+            /** Format: int64 */
+            version: number;
+            createdAt: components["schemas"]["Timestamp"];
+            reviewedAt: components["schemas"]["Timestamp"] | null;
+        };
+        AdminAppeal: {
+            id: components["schemas"]["ObjectId"];
+            actionId: components["schemas"]["ObjectId"];
+            appellantUserId: components["schemas"]["ObjectId"];
+            explanation: string;
+            /** @enum {string} */
+            status: "pending" | "upheld" | "overturned";
+            /** Format: int64 */
+            version: number;
+            createdAt: components["schemas"]["Timestamp"];
+        };
+        AuditEntry: {
+            /** Format: int64 */
+            id: number;
+            actorOperatorId: components["schemas"]["ObjectId"] | null;
+            eventType: string;
+            targetType: string;
+            targetId: components["schemas"]["ObjectId"];
+            reason: string | null;
+            beforeState: {
+                [key: string]: unknown;
+            } | null;
+            afterState: {
+                [key: string]: unknown;
+            } | null;
+            requestId: components["schemas"]["ObjectId"] | null;
+            reportId: components["schemas"]["ObjectId"] | null;
+            createdAt: components["schemas"]["Timestamp"];
+        };
         User: {
             id: components["schemas"]["ObjectId"];
             handle: components["schemas"]["Handle"];
@@ -379,6 +921,62 @@ export interface components {
             updatedAt: components["schemas"]["Timestamp"];
             editedAt: components["schemas"]["Timestamp"] | null;
         };
+        /** @enum {string} */
+        ReportReason: "spam" | "harassment" | "hatefulContent" | "violence" | "sexualContent" | "illegalOrDangerousTrade" | "personalInformation" | "copyright" | "other";
+        CreateReportRequest: {
+            reason: components["schemas"]["ReportReason"];
+            /** @description Required for other; at most 500 Unicode grapheme clusters and 8192 UTF-8 bytes. */
+            explanation?: string;
+        };
+        UpdateReportRequest: {
+            reason?: components["schemas"]["ReportReason"];
+            /** @description At most 500 Unicode grapheme clusters and 8192 UTF-8 bytes. */
+            explanation?: string;
+        };
+        Report: {
+            id: components["schemas"]["ObjectId"];
+            targetId: components["schemas"]["ObjectId"];
+            /** @enum {string} */
+            targetType: "post" | "reply";
+            reason: components["schemas"]["ReportReason"];
+            explanation: string | null;
+            /** @enum {string} */
+            status: "received" | "inReview" | "actioned" | "noAction";
+            /** Format: int64 */
+            version: number;
+            createdAt: components["schemas"]["Timestamp"];
+            updatedAt: components["schemas"]["Timestamp"];
+        };
+        ReviewReportRequest: {
+            /** @enum {string} */
+            status: "inReview" | "actioned" | "noAction";
+            reason: string;
+            /** @default false */
+            removeContent: boolean;
+        };
+        AdminReport: {
+            id: components["schemas"]["ObjectId"];
+            reporterId?: components["schemas"]["ObjectId"] | null;
+            targetId: components["schemas"]["ObjectId"];
+            /** @enum {string} */
+            targetType: "post" | "reply";
+            authorId: components["schemas"]["ObjectId"];
+            reason: components["schemas"]["ReportReason"];
+            explanation: string | null;
+            /** @enum {string} */
+            status: "received" | "inReview" | "actioned" | "noAction";
+            /** Format: int64 */
+            version: number;
+            createdAt: components["schemas"]["Timestamp"];
+            updatedAt: components["schemas"]["Timestamp"];
+            evidenceContent: string;
+            /** Format: int64 */
+            targetVersion: number;
+            targetCreatedAt: components["schemas"]["Timestamp"];
+        };
+        AdminReportList: {
+            items: components["schemas"]["AdminReport"][];
+        };
         FollowRelationship: {
             id: components["schemas"]["ObjectId"];
             followerId: components["schemas"]["ObjectId"];
@@ -403,7 +1001,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "invalid_credentials" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible";
+            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "invalid_credentials" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible" | "cannot_block_self" | "cannot_mute_self" | "cannot_report_own_content" | "report_reason_required" | "report_already_exists" | "report_not_editable" | "invalid_report_transition" | "operator_auth_required" | "operator_mfa_required" | "operator_mfa_stale" | "operator_permission_denied" | "appeal_reviewer_conflict" | "deletion_already_pending" | "deletion_not_pending" | "restoration_window_expired" | "purge_in_progress" | "operator_username_unavailable" | "appeal_already_exists";
             requestId?: string;
         };
     };
@@ -420,6 +1018,7 @@ export interface components {
     };
     parameters: {
         PostId: components["schemas"]["ObjectId"];
+        ReportId: components["schemas"]["ObjectId"];
         TargetUserId: components["schemas"]["ObjectId"];
         UserId: components["schemas"]["ObjectId"];
         RelationshipId: components["schemas"]["ObjectId"];
@@ -549,6 +1148,513 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             429: components["responses"]["Problem"];
+        };
+    };
+    operatorLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Operator signed in with MFA */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operator"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getCurrentOperator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current operator */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operator"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    listAdminReports: {
+        parameters: {
+            query?: {
+                status?: "received" | "inReview" | "actioned" | "noAction";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Moderation report queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReportList"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getAdminReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: components["parameters"]["ReportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report with immutable evidence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReport"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    reviewAdminReport: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                reportId: components["parameters"]["ReportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated report review state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReport"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    operatorLogout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operator session revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    enrollOperatorMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorEnrollmentRequest"];
+            };
+        };
+        responses: {
+            /** @description MFA enrollment completed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    confirmOperatorMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorMfaRequest"];
+            };
+        };
+        responses: {
+            /** @description MFA freshness renewed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    rotateOperatorRecoveryCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New one-time recovery codes; returned once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    listOperatorSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active operator sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorSession"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    revokeOperatorSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["schemas"]["ObjectId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operator session revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    createOperator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Pending operator and one-time MFA enrollment material */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorEnrollment"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    replaceOperatorRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operatorId: components["schemas"]["ObjectId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceOperatorRolesRequest"];
+            };
+        };
+        responses: {
+            /** @description Operator roles replaced */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    getAdminBasicAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Basic account information without private content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BasicAccount"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    applyUserRestriction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestrictionRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied restriction */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Restriction"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    createModerationAppeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAppealRequest"];
+            };
+        };
+        responses: {
+            /** @description Appeal created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listModerationAppeals: {
+        parameters: {
+            query?: {
+                status?: "pending" | "upheld" | "overturned";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appeal review queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAppeal"][];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    reviewModerationAppeal: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                appealId: components["schemas"]["ObjectId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewAppealRequest"];
+            };
+        };
+        responses: {
+            /** @description Reviewed appeal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+        };
+    };
+    readAuditLog: {
+        parameters: {
+            query: {
+                targetType: "user" | "post" | "report" | "operator" | "appeal";
+                targetId: components["schemas"]["ObjectId"];
+                from: components["schemas"]["Timestamp"];
+                to: components["schemas"]["Timestamp"];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Time- and subject-bounded audit records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEntry"][];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     listSessions: {
@@ -694,6 +1800,90 @@ export interface operations {
             409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    requestAccountDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestAccountDeletion"];
+            };
+        };
+        responses: {
+            /** @description Account deletion requested and all sessions revoked */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletionRequest"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    cancelAccountDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Pending account deletion cancelled after identity verification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletionRequest"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    restoreAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Account restored after identity verification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletionRequest"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             429: components["responses"]["Problem"];
         };
     };
@@ -879,6 +2069,106 @@ export interface operations {
             429: components["responses"]["Problem"];
         };
     };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                postId: components["parameters"]["PostId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Existing unresolved report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Created report */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: components["parameters"]["ReportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report status visible to its reporter */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    updateReport: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                reportId: components["parameters"]["ReportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated unresolved report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
     followUser: {
         parameters: {
             query?: never;
@@ -918,6 +2208,102 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Relationship removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    blockUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetUserId: components["parameters"]["TargetUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User blocked and Follow relationships removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    unblockUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetUserId: components["parameters"]["TargetUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Block removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    muteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetUserId: components["parameters"]["TargetUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User muted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    unmuteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetUserId: components["parameters"]["TargetUserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mute removed */
             204: {
                 headers: {
                     [name: string]: unknown;

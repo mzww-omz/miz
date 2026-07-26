@@ -2,6 +2,7 @@
 
 mod federation_identity;
 mod handle;
+mod moderation;
 mod object_id;
 mod post;
 
@@ -10,7 +11,9 @@ pub use federation_identity::{
     profile_url,
 };
 pub use handle::{Handle, HandleError, can_change_handle};
+pub use moderation::{OperatorPermission, OperatorRole, operator_authorized};
 pub use object_id::{
-    FollowRelationshipId, ObjectIdError, PostId, ReportId, RequestId, SessionId, UserId,
+    AccountDeletionRequestId, AppealId, FollowRelationshipId, ObjectIdError, OperatorId, PostId,
+    ReportId, RequestId, RestrictionId, SessionId, UserId,
 };
 pub use post::{PostContent, PostContentError};

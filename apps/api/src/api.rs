@@ -112,14 +112,34 @@ mod tests {
     fn canonical_openapi_document_has_required_contract() {
         let document: serde_json::Value = serde_yaml::from_str(OPENAPI_YAML).unwrap();
         assert_eq!(document["openapi"], "3.1.0");
+        assert!(document["paths"]["/api/v1/admin/auth/login"].is_object());
+        assert!(document["paths"]["/api/v1/admin/me"].is_object());
+        assert!(document["paths"]["/api/v1/admin/reports/{reportId}"]["patch"].is_object());
+        assert!(document["paths"]["/api/v1/admin/auth/mfa/enroll"].is_object());
+        assert!(document["paths"]["/api/v1/admin/operators/{operatorId}/roles"].is_object());
+        assert!(document["paths"]["/api/v1/admin/audit-logs"].is_object());
+        assert!(document["paths"]["/api/v1/appeals"].is_object());
         assert!(document["paths"]["/api/v1/posts"].is_object());
         assert!(document["paths"]["/api/v1/posts/{postId}/replies"]["get"].is_object());
+        assert!(document["paths"]["/api/v1/posts/{postId}/reports"]["post"].is_object());
+        assert!(document["paths"]["/api/v1/reports/{reportId}"]["patch"].is_object());
         assert!(document["paths"]["/api/v1/follow-requests/{relationshipId}/accept"].is_object());
+        assert!(document["paths"]["/api/v1/users/{targetUserId}/block"].is_object());
+        assert!(document["paths"]["/api/v1/users/me/deletion-requests"].is_object());
+        assert!(document["paths"]["/api/v1/users/{targetUserId}/mute"].is_object());
         assert!(document["paths"]["/api/v1/timelines/home"].is_object());
         assert_eq!(
             document["components"]["schemas"]["ObjectId"]["pattern"],
             "^[0-9A-Za-z]{22}$"
         );
+        assert!(document["components"]["schemas"]["AccountDeletionRequest"].is_object());
+        assert!(document["components"]["schemas"]["AdminReport"].is_object());
+        assert!(document["components"]["schemas"]["OperatorEnrollment"].is_object());
+        assert!(document["components"]["schemas"]["Restriction"].is_object());
+        assert!(document["components"]["schemas"]["Appeal"].is_object());
+        assert!(document["components"]["schemas"]["AuditEntry"].is_object());
+        assert!(document["components"]["schemas"]["Operator"].is_object());
+        assert!(document["components"]["schemas"]["Report"].is_object());
         assert!(document["components"]["schemas"]["Problem"].is_object());
     }
 

@@ -113,7 +113,7 @@
     </a>
     <p class="tagline">近くの声を、静かに。</p>
     {#if user}
-      <button class="text-button" type="button" onclick={logout}>ログアウト</button>
+      <div class="header-actions"><a class="text-button" href="/manage">機能管理</a><button class="text-button" type="button" onclick={logout}>ログアウト</button></div>
     {:else}
       <a class="text-button" href="#login">はじめる</a>
     {/if}
@@ -206,7 +206,7 @@
                   <time datetime={post.createdAt}>{date.format(new Date(post.createdAt))}</time>
                 </header>
                 <p>{post.content}</p>
-                <footer><span>{post.editedAt ? '編集済み' : '公開'}</span><span>{post.effectiveVisibility === 'public' ? '○ すべての人' : '◐ フォロワー'}</span></footer>
+                <footer><span>{post.editedAt ? '編集済み' : '公開'}</span><span>{post.effectiveVisibility === 'public' ? '○ すべての人' : '◐ フォロワー'}</span><a href={`/manage?post=${post.id}&user=${post.authorId}`}>返信・操作</a></footer>
               </div>
             </article>
           {:else}
@@ -246,6 +246,7 @@
   .brand { display: flex; width: fit-content; align-items: center; gap: 12px; color: inherit; text-decoration: none; font: 800 24px/1 Georgia, serif; letter-spacing: .18em; }
   .brand-mark { display: grid; place-items: center; width: 32px; height: 32px; color: #f4f1e8; background: #1646d8; font-size: 19px; letter-spacing: 0; transform: rotate(-3deg); }
   .tagline { font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: 13px; letter-spacing: .16em; }
+  .header-actions { justify-self: end; display: flex; gap: 18px; }
   .text-button { justify-self: end; border: 0; border-bottom: 1px solid currentColor; color: inherit; background: none; padding: 5px 0; text-decoration: none; cursor: pointer; font-size: 12px; font-weight: 700; }
 
   .welcome { min-height: calc(100vh - 90px); display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, .55fr); }
@@ -315,6 +316,7 @@
   .post-body time { margin-left: auto; font-size: 9px; }
   .post-body > p { white-space: pre-wrap; margin: 14px 0 22px; font: 15px/1.85 "Yu Mincho", serif; overflow-wrap: anywhere; }
   .post-body footer { display: flex; gap: 18px; color: rgba(23,34,58,.5); font-size: 9px; }
+  .post-body footer a { margin-left: auto; color: #1646d8; font-weight: 700; }
   .empty { padding: 80px 20px; text-align: center; }
   .empty > span { color: #1646d8; font-size: 38px; }.empty h3 { font: 500 22px "Yu Mincho", serif; }.empty p { font-size: 11px; opacity: .6; }
   .more { width: 100%; margin-top: 28px; border: 1px solid #17223a; color: inherit; background: transparent; padding: 15px; cursor: pointer; font-size: 11px; font-weight: 700; }
