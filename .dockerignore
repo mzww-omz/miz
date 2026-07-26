@@ -4,3 +4,48 @@ target
 apps/web/.svelte-kit
 apps/web/build
 .env
+
+# Ignore virtual environments
+*/venv/
+.env/
+*.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Git stuff
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker build cache
+*.log
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Environment dump
+*.sqlite3
+
+# Audio / model cache (kalau pakai)
+*.wav
+*.mp3
+*.ogg
+
+# Node (kalau ada)
+node_modules/
+
+# Temporary files
+tmp/
+temp/
