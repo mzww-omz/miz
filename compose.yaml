@@ -34,16 +34,24 @@ services:
     environment:
       DATABASE_URL: postgres://miz:miz@db:5432/miz
       APP_ORIGIN: http://localhost:8080
+      SMTP_ADDR: mailpit:1025
       CURSOR_SIGNING_KEY: insecure-local-cursor-signing-key-change-me
       RUST_LOG: miz_api=debug,tower_http=debug
     depends_on:
       migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "miz-api-healthcheck"]
       interval: 5s
       timeout: 2s
       retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:8025:8025"
 
   db:
     image: postgres:17-alpine

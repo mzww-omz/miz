@@ -385,6 +385,7 @@ mod tests {
         let state = SecurityState {
             pool: pool.clone(),
             origin: "https://m1z.jp".to_owned(),
+            smtp_addr: "127.0.0.1:1".to_owned(),
             cursor_signing_key: vec![9; 32],
         };
         let actor = UserId::new().unwrap();

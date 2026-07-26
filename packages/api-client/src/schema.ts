@@ -439,7 +439,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible";
+            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "registration_expired" | "magic_link_invalid_or_used" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired" | "cannot_follow_self" | "invalid_state_transition" | "parent_not_visible" | "invalid_cursor" | "cursor_expired" | "target_not_visible";
             requestId?: string;
         };
     };
@@ -565,6 +565,7 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             429: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
         };
     };
     verifyMagicLink: {
@@ -607,6 +608,7 @@ export interface operations {
             200: components["responses"]["RegistrationStatus"];
             400: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            410: components["responses"]["Problem"];
         };
     };
     completeRegistration: {

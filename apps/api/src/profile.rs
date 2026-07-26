@@ -183,7 +183,7 @@ pub async fn update_current_user(
     Ok(Json(load_user(&state.pool, principal.user_id).await?))
 }
 
-async fn load_user(pool: &PgPool, user_id: UserId) -> Result<UserResponse, Problem> {
+pub(crate) async fn load_user(pool: &PgPool, user_id: UserId) -> Result<UserResponse, Problem> {
     let row: (Vec<u8>, String, String, String, String, i64, String, String) = sqlx::query_as(
         "SELECT u.id, h.value, u.display_name, u.bio, u.privacy, u.version, to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'), to_char(u.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') FROM users u JOIN handles h ON h.user_id = u.id AND h.is_current WHERE u.id = $1",
     )

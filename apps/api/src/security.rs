@@ -25,6 +25,7 @@ const SESSION_RATE_LIMIT_PER_MINUTE: i64 = 120;
 pub struct SecurityState {
     pub pool: PgPool,
     pub origin: String,
+    pub smtp_addr: String,
     pub cursor_signing_key: Vec<u8>,
 }
 
@@ -182,7 +183,7 @@ fn enforce_csrf(
     if valid { Ok(()) } else { Err(csrf_problem()) }
 }
 
-async fn enforce_rate_limit(
+pub(crate) async fn enforce_rate_limit(
     pool: &PgPool,
     bucket: &str,
     key: &str,
@@ -300,13 +301,13 @@ pub fn verify_secret(value: &str, expected_hash: &[u8]) -> bool {
     expected_hash.len() == candidate.len() && bool::from(expected_hash.ct_eq(candidate.as_slice()))
 }
 
-fn random_token() -> Result<String, getrandom::Error> {
+pub(crate) fn random_token() -> Result<String, getrandom::Error> {
     let mut bytes = [0; 32];
     getrandom::fill(&mut bytes)?;
     Ok(URL_SAFE_NO_PAD.encode(bytes))
 }
 
-fn hash(value: &[u8]) -> [u8; 32] {
+pub(crate) fn hash(value: &[u8]) -> [u8; 32] {
     Sha256::digest(value).into()
 }
 
