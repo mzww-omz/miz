@@ -1,0 +1,417 @@
+openapi: 3.1.0
+info:
+  title: MIZ API
+  version: 0.1.0
+  description: The authoritative HTTP contract between the Rust API and MIZ clients.
+servers:
+  - url: /
+security:
+  - sessionCookie: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: Process is running
+          content:
+            text/plain:
+              schema: { type: string, const: ok }
+  /readyz:
+    get:
+      operationId: readiness
+      security: []
+      responses:
+        '200': { description: Dependencies are ready }
+        '503': { $ref: '#/components/responses/Problem' }
+  /openapi.json:
+    get:
+      operationId: openapiDocument
+      security: []
+      responses:
+        '200':
+          description: This OpenAPI document as JSON
+          content:
+            application/json:
+              schema: { type: object }
+  /api/v1/registrations:
+    post:
+      operationId: startRegistration
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartRegistrationRequest' }
+      responses:
+        '202':
+          description: Registration started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/registrations/{registrationId}/magic-link/verify:
+    post:
+      operationId: verifyMagicLink
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/RegistrationStatus' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+  /api/v1/registrations/{registrationId}/profile:
+    put:
+      operationId: saveRegistrationProfile
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegistrationProfile' }
+      responses:
+        '200': { $ref: '#/components/responses/RegistrationStatus' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/registrations/{registrationId}/complete:
+    post:
+      operationId: completeRegistration
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationId'
+      responses:
+        '201':
+          description: Account created
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateCurrentUser
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+  /api/v1/posts:
+    post:
+      operationId: createPost
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePostRequest' }
+      responses:
+        '201':
+          description: Created post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+  /api/v1/posts/{postId}:
+    get:
+      operationId: getPost
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        '200':
+          description: Post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updatePost
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePostRequest' }
+      responses:
+        '200':
+          description: Updated post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deletePost
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': { description: Post deleted }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+  /api/v1/posts/{postId}/replies:
+    post:
+      operationId: createReply
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePostRequest' }
+      responses:
+        '201':
+          description: Created reply
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/{targetUserId}/follow:
+    put:
+      operationId: followUser
+      parameters:
+        - $ref: '#/components/parameters/TargetUserId'
+      responses:
+        '200':
+          description: Follow relationship
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FollowRelationship' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: unfollowUser
+      parameters:
+        - $ref: '#/components/parameters/TargetUserId'
+      responses:
+        '204': { description: Relationship removed }
+        '401': { $ref: '#/components/responses/Problem' }
+  /api/v1/timelines/home:
+    get:
+      operationId: getHomeTimeline
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Home timeline
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-miz_session
+  parameters:
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    TargetUserId:
+      name: targetUserId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+  responses:
+    Problem:
+      description: RFC 9457 Problem Details
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RegistrationStatus:
+      description: Registration state updated
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status: { type: string }
+  schemas:
+    ObjectId:
+      type: string
+      pattern: '^[0-9A-Za-z]{22}$'
+      minLength: 22
+      maxLength: 22
+    Timestamp:
+      type: string
+      format: date-time
+      description: RFC 3339 timestamp normalized to UTC.
+    Handle:
+      type: string
+      pattern: '^[0-9A-Za-z][0-9A-Za-z_]{2,23}$'
+    StartRegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [provider, email]
+      properties:
+        provider: { type: string, enum: [magicLink, google] }
+        email: { type: string, format: email }
+    RegistrationState:
+      type: object
+      required: [registrationId, status, expiresAt]
+      properties:
+        registrationId: { $ref: '#/components/schemas/ObjectId' }
+        status: { type: string }
+        expiresAt: { $ref: '#/components/schemas/Timestamp' }
+    RegistrationProfile:
+      type: object
+      additionalProperties: false
+      required: [handle, displayName, birthDate]
+      properties:
+        handle: { $ref: '#/components/schemas/Handle' }
+        displayName: { type: string, minLength: 1, maxLength: 50 }
+        birthDate: { type: string, format: date }
+    User:
+      type: object
+      required: [id, handle, displayName, bio, privacy, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        handle: { $ref: '#/components/schemas/Handle' }
+        displayName: { type: string }
+        bio: { type: string }
+        privacy: { type: string, enum: [public, private] }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    UpdateUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        handle: { $ref: '#/components/schemas/Handle' }
+        displayName: { type: string, minLength: 1, maxLength: 50 }
+        bio: { type: string }
+        privacy: { type: string, enum: [public, private] }
+    CreatePostRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 500 }
+    Post:
+      type: object
+      required: [id, authorId, replyToPostId, content, effectiveVisibility, state, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        authorId: { $ref: '#/components/schemas/ObjectId' }
+        replyToPostId:
+          oneOf:
+            - { $ref: '#/components/schemas/ObjectId' }
+            - { type: 'null' }
+        content: { type: string }
+        effectiveVisibility: { type: string, enum: [public, followers] }
+        state: { type: string, enum: [published, deleted, tombstone] }
+        version: { type: integer, format: int64, minimum: 1 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    FollowRelationship:
+      type: object
+      required: [id, followerId, followeeId, status, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        followerId: { $ref: '#/components/schemas/ObjectId' }
+        followeeId: { $ref: '#/components/schemas/ObjectId' }
+        status: { type: string, enum: [pending, accepted, rejected, cancelled, removed] }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    PostPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Post' }
+        nextCursor:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, detail, code]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        code:
+          type: string
+          enum: [auth_required, forbidden, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, rate_limited]
+        requestId: { type: string }

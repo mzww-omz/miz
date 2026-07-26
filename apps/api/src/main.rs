@@ -1,3 +1,4 @@
+mod api;
 mod application;
 mod federation;
 mod infrastructure;
@@ -14,6 +15,8 @@ async fn main() {
     let app = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/readyz", get(ready))
+        .route("/openapi.json", get(api::openapi))
+        .fallback(api::not_found)
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await

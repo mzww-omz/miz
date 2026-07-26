@@ -3,6 +3,7 @@ WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY apps/api apps/api
 COPY migrations migrations
+COPY openapi openapi
 RUN cargo build --release -p miz-api
 
 FROM debian:bookworm-slim
