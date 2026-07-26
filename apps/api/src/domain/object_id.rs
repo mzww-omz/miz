@@ -117,6 +117,7 @@ object_id!(
     UserId
 );
 object_id!(PostId);
+object_id!(FollowRelationshipId);
 object_id!(ReportId);
 object_id!(SessionId);
 
