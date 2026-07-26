@@ -1,0 +1,8 @@
+{
+  "name": "miz",
+  "private": true,
+  "scripts": {
+    "check": "pnpm --recursive check",
+    "build": "pnpm --recursive build"
+  }
+}
