@@ -772,13 +772,18 @@ name = "miz-api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "getrandom 0.3.4",
  "http-body-util",
  "serde",
  "serde_json",
  "serde_yaml",
+ "sha2",
  "sqlx",
+ "subtle",
  "tokio",
+ "tower",
+ "url",
 ]
 
 [[package]]

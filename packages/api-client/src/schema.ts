@@ -296,7 +296,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "auth_required" | "forbidden" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "rate_limited";
+            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "rate_limited";
             requestId?: string;
         };
     };

@@ -28,23 +28,23 @@ pub async fn not_found(uri: Uri) -> Problem {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Problem {
-    r#type: String,
-    title: String,
+    r#type: Box<str>,
+    title: Box<str>,
     status: u16,
-    detail: String,
-    code: String,
+    detail: Box<str>,
+    code: Box<str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    request_id: Option<String>,
+    request_id: Option<Box<str>>,
 }
 
 impl Problem {
     pub fn new(status: StatusCode, code: &str, detail: impl Into<String>) -> Self {
         Self {
-            r#type: format!("https://m1z.jp/problems/{code}"),
-            title: status.canonical_reason().unwrap_or("Error").to_owned(),
+            r#type: format!("https://m1z.jp/problems/{code}").into_boxed_str(),
+            title: status.canonical_reason().unwrap_or("Error").into(),
             status: status.as_u16(),
-            detail: detail.into(),
-            code: code.to_owned(),
+            detail: detail.into().into_boxed_str(),
+            code: code.into(),
             request_id: None,
         }
     }

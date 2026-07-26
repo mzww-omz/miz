@@ -22,6 +22,7 @@ services:
       dockerfile: apps/api/Dockerfile
     environment:
       DATABASE_URL: postgres://miz:miz@db:5432/miz
+      APP_ORIGIN: http://localhost:8080
     depends_on:
       db:
         condition: service_healthy
