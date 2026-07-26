@@ -1,5 +1,4 @@
 mod application;
-mod domain;
 mod federation;
 mod infrastructure;
 
