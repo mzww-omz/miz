@@ -24,8 +24,14 @@ Open <http://localhost:8080>. The gateway serves the web app and forwards `/api/
 ## Checks
 
 ```sh
-cargo check
 pnpm install
-pnpm check
-pnpm build
+pnpm run ci
 ```
+
+Set `DATABASE_URL` to run the PostgreSQL integration test; CI supplies an ephemeral PostgreSQL 17 service. Database deployment is independent from API startup:
+
+```sh
+DATABASE_URL=postgres://... cargo run --bin miz-migrate
+```
+
+Environment templates live in `infra/environments`. Release and rollback steps are in `docs/runbooks/release.md`.

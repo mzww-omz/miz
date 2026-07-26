@@ -1,0 +1,69 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable image tag to build
+        required: true
+      staging_url:
+        description: Staging origin after the tag and migrations are deployed
+        required: true
+      production_url:
+        description: Production origin after promotion
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: tag
+        run: |
+          [[ "${{ inputs.image_tag }}" =~ ^[0-9A-Za-z._-]+$ ]]
+          echo "value=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/api:${{ steps.tag.outputs.value }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/web:${{ steps.tag.outputs.value }}
+
+  staging-approval:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Smoke test deployed staging tag
+        run: |
+          curl --fail --show-error --silent "${{ inputs.staging_url }}/healthz"
+          curl --fail --show-error --silent "${{ inputs.staging_url }}/readyz"
+          curl --fail --show-error --silent "${{ inputs.staging_url }}/openapi.json" >/dev/null
+
+  production-approval:
+    needs: [build, staging-approval]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Smoke test promoted production tag
+        run: |
+          curl --fail --show-error --silent "${{ inputs.production_url }}/healthz"
+          curl --fail --show-error --silent "${{ inputs.production_url }}/readyz"
+          curl --fail --show-error --silent "${{ inputs.production_url }}/openapi.json" >/dev/null

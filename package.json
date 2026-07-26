@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "check": "pnpm --recursive check",
-    "build": "pnpm --recursive build"
+    "build": "pnpm --recursive build",
+    "ci": "cargo fmt -- --check && cargo clippy --all-targets -- -D warnings && cargo test --all-targets --locked && pnpm check && pnpm build"
   }
 }

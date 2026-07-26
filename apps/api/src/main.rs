@@ -3,6 +3,7 @@ mod application;
 pub mod authorization;
 mod federation;
 mod infrastructure;
+mod observability;
 pub mod security;
 
 use axum::{
@@ -13,9 +14,21 @@ use axum::{
     routing::get,
 };
 use security::SecurityState;
+use tower::ServiceBuilder;
+use tower_http::{
+    request_id::{PropagateRequestIdLayer, SetRequestIdLayer},
+    trace::TraceLayer,
+};
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .json()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = infrastructure::database(&database_url)
         .await
@@ -43,8 +56,21 @@ fn app(state: SecurityState) -> Router {
         .route("/healthz", get(|| async { "ok" }))
         .route("/readyz", get(ready))
         .route("/openapi.json", get(api::openapi))
+        .route("/metrics", get(observability::metrics))
         .nest("/api/v1", protected_api)
         .fallback(api::not_found)
+        .layer(
+            ServiceBuilder::new()
+                .layer(SetRequestIdLayer::new(
+                    observability::REQUEST_ID_HEADER,
+                    observability::MakeRequestIdFromCSPRNG,
+                ))
+                .layer(PropagateRequestIdLayer::new(
+                    observability::REQUEST_ID_HEADER,
+                ))
+                .layer(TraceLayer::new_for_http())
+                .layer(middleware::from_fn(observability::count_requests)),
+        )
         .layer(DefaultBodyLimit::max(16 * 1024))
         .with_state(state)
 }
@@ -78,5 +104,9 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let request_id = response.headers()[observability::REQUEST_ID_HEADER]
+            .to_str()
+            .unwrap();
+        assert_eq!(request_id.len(), 22);
     }
 }

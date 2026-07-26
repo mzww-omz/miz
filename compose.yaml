@@ -16,6 +16,17 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
 
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["miz-migrate"]
+    environment:
+      DATABASE_URL: postgres://miz:miz@db:5432/miz
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -23,9 +34,10 @@ services:
     environment:
       DATABASE_URL: postgres://miz:miz@db:5432/miz
       APP_ORIGIN: http://localhost:8080
+      RUST_LOG: miz_api=debug,tower_http=debug
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "miz-api-healthcheck"]
       interval: 5s

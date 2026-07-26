@@ -119,6 +119,7 @@ object_id!(
 object_id!(PostId);
 object_id!(FollowRelationshipId);
 object_id!(ReportId);
+object_id!(RequestId);
 object_id!(SessionId);
 
 #[cfg(test)]

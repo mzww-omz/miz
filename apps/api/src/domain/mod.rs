@@ -9,4 +9,6 @@ pub use federation_identity::{
     profile_url,
 };
 pub use handle::{Handle, HandleError, can_change_handle};
-pub use object_id::{FollowRelationshipId, ObjectIdError, PostId, ReportId, SessionId, UserId};
+pub use object_id::{
+    FollowRelationshipId, ObjectIdError, PostId, ReportId, RequestId, SessionId, UserId,
+};

@@ -1,0 +1,91 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: miz_test
+          POSTGRES_USER: miz
+          POSTGRES_PASSWORD: miz
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U miz -d miz_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://miz:miz@localhost:5432/miz_test
+      APP_ORIGIN: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          components: rustfmt, clippy
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format and lint
+        run: |
+          cargo fmt -- --check
+          cargo clippy --all-targets -- -D warnings
+      - name: Validate forward migrations independently
+        run: |
+          cargo run --bin miz-migrate
+          cargo run --bin miz-migrate
+      - name: Unit and integration tests
+        run: cargo test --all-targets --locked
+      - name: Contract check
+        run: |
+          pnpm --filter @miz/api-client generate
+          git diff --exit-code -- openapi/openapi.yaml packages/api-client/src/schema.ts
+      - name: Frontend checks and builds
+        run: |
+          pnpm check
+          pnpm build
+          cargo build --release --locked
+      - name: Container builds
+        run: |
+          docker compose config --quiet
+          docker compose build
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: JavaScript dependency audit
+        run: pnpm audit --audit-level high
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses bans sources
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
