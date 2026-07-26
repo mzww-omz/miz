@@ -37,7 +37,7 @@ impl fmt::Display for HandleError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Invalid => {
-                formatter.write_str("handle must match ^[0-9A-Za-z][0-9A-Za-z_]{2,23}$")
+                formatter.write_str("handle must be 3-24 lowercase letters, digits, or non-consecutive underscores, without leading or trailing underscores")
             }
             Self::Reserved => formatter.write_str("handle is reserved"),
         }
@@ -50,19 +50,22 @@ impl FromStr for Handle {
     type Err = HandleError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.to_ascii_lowercase();
         let valid = (3..=24).contains(&value.len())
             && value.is_ascii()
             && value.as_bytes()[0].is_ascii_alphanumeric()
+            && value.as_bytes()[value.len() - 1].is_ascii_alphanumeric()
             && value
                 .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_');
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+            && !value.contains("__");
         if !valid {
             return Err(HandleError::Invalid);
         }
-        if RESERVED.contains(&value.to_ascii_lowercase().as_str()) {
+        if RESERVED.contains(&value.as_str()) {
             return Err(HandleError::Reserved);
         }
-        Ok(Self(value.to_owned()))
+        Ok(Self(value))
     }
 }
 
@@ -98,14 +101,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn preserves_case_and_normalizes_for_lookup() {
+    fn normalizes_case_for_storage_and_lookup() {
         let handle: Handle = "Miz_User".parse().unwrap();
-        assert_eq!(handle.as_str(), "Miz_User");
+        assert_eq!(handle.as_str(), "miz_user");
         assert_eq!(handle.normalized(), "miz_user");
-        assert_eq!(
-            handle.normalized(),
-            "miz_USER".parse::<Handle>().unwrap().normalized()
-        );
+        assert_eq!(handle, "miz_USER".parse::<Handle>().unwrap());
     }
 
     #[test]
@@ -114,6 +114,8 @@ mod tests {
             "ab",
             "_miz",
             "miz-user",
+            "miz_",
+            "miz__user",
             "ｍｉｚ",
             "admin",
             "Support",
@@ -124,11 +126,14 @@ mod tests {
     }
 
     #[test]
-    fn api_representation_preserves_case_and_validates() {
+    fn api_representation_normalizes_case_and_validates() {
         let handle: Handle = "Miz_User".parse().unwrap();
         let json = serde_json::to_string(&handle).unwrap();
-        assert_eq!(json, "\"Miz_User\"");
-        assert_eq!(serde_json::from_str::<Handle>(&json).unwrap(), handle);
+        assert_eq!(json, "\"miz_user\"");
+        assert_eq!(
+            serde_json::from_str::<Handle>("\"MIZ_USER\"").unwrap(),
+            handle
+        );
         assert!(serde_json::from_str::<Handle>("\"_invalid\"").is_err());
     }
 

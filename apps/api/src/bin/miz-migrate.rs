@@ -1,5 +1,4 @@
-#[path = "../infrastructure/mod.rs"]
-mod infrastructure;
+use miz_api::infrastructure;
 
 #[tokio::main]
 async fn main() {
@@ -7,8 +6,7 @@ async fn main() {
     let pool = infrastructure::database(&url)
         .await
         .expect("database must be reachable");
-    sqlx::migrate!("../../migrations")
-        .run(&pool)
+    infrastructure::migrate(&pool)
         .await
         .expect("database migrations must succeed");
 }

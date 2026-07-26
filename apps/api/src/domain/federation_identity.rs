@@ -62,9 +62,9 @@ mod tests {
     #[test]
     fn formats_local_and_federated_identity() {
         let handle: Handle = "Miz_User".parse().unwrap();
-        assert_eq!(local_display(&handle), "@Miz_User");
-        assert_eq!(profile_url(&handle), "https://m1z.jp/@Miz_User");
-        assert_eq!(fediverse_address(&handle), "@Miz_User@m1z.jp");
+        assert_eq!(local_display(&handle), "@miz_user");
+        assert_eq!(profile_url(&handle), "https://m1z.jp/@miz_user");
+        assert_eq!(fediverse_address(&handle), "@miz_user@m1z.jp");
     }
 
     #[test]

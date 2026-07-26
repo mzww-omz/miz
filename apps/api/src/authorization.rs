@@ -1,4 +1,4 @@
-use miz_api::domain::UserId;
+use miz_api::domain::{SessionId, UserId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
@@ -10,6 +10,7 @@ pub enum Role {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Principal {
     pub user_id: UserId,
+    pub session_id: SessionId,
     pub role: Role,
 }
 
@@ -48,6 +49,7 @@ mod tests {
     fn principal(byte: u8, role: Role) -> Principal {
         Principal {
             user_id: UserId::from_bytes([byte; 16]),
+            session_id: SessionId::from_bytes([byte; 16]),
             role,
         }
     }

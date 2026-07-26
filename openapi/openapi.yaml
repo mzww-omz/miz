@@ -103,6 +103,57 @@ paths:
               schema: { $ref: '#/components/schemas/User' }
         '409': { $ref: '#/components/responses/Problem' }
         '410': { $ref: '#/components/responses/Problem' }
+  /api/v1/sessions:
+    get:
+      operationId: listSessions
+      responses:
+        '200':
+          description: Active sessions for the current user
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: revokeAllSessions
+      responses:
+        '204':
+          description: All sessions revoked
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/sessions/current:
+    delete:
+      operationId: revokeCurrentSession
+      responses:
+        '204':
+          description: Current session revoked
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ObjectId' }
+      responses:
+        '204': { description: Session revoked }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/users/me:
     get:
       operationId: getCurrentUser
@@ -113,6 +164,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
     patch:
       operationId: updateCurrentUser
       parameters:
@@ -128,10 +180,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '412': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/posts:
     post:
       operationId: createPost
@@ -152,6 +207,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/posts/{postId}:
     get:
       operationId: getPost
@@ -163,7 +219,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Post' }
+        '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
     patch:
       operationId: updatePost
       parameters:
@@ -180,11 +238,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '412': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: deletePost
       parameters:
@@ -193,10 +253,10 @@ paths:
       responses:
         '204': { description: Post deleted }
         '401': { $ref: '#/components/responses/Problem' }
-        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '412': { $ref: '#/components/responses/Problem' }
         '428': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /api/v1/posts/{postId}/replies:
     post:
       operationId: createReply
@@ -316,7 +376,7 @@ components:
       description: RFC 3339 timestamp normalized to UTC.
     Handle:
       type: string
-      pattern: '^[0-9A-Za-z][0-9A-Za-z_]{2,23}$'
+      pattern: '^[0-9A-Za-z](?!.*__)[0-9A-Za-z_]{1,22}[0-9A-Za-z]$'
     StartRegistrationRequest:
       type: object
       additionalProperties: false
@@ -346,7 +406,7 @@ components:
         id: { $ref: '#/components/schemas/ObjectId' }
         handle: { $ref: '#/components/schemas/Handle' }
         displayName: { type: string }
-        bio: { type: string }
+        bio: { type: string, maxLength: 160 }
         privacy: { type: string, enum: [public, private] }
         version: { type: integer, format: int64, minimum: 1 }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
@@ -354,20 +414,35 @@ components:
     UpdateUserRequest:
       type: object
       additionalProperties: false
+      minProperties: 1
       properties:
         handle: { $ref: '#/components/schemas/Handle' }
         displayName: { type: string, minLength: 1, maxLength: 50 }
-        bio: { type: string }
+        bio: { type: string, maxLength: 160 }
         privacy: { type: string, enum: [public, private] }
+    Session:
+      type: object
+      required: [id, deviceName, createdAt, lastSeenAt, idleExpiresAt, absoluteExpiresAt, current]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        deviceName: { type: string, maxLength: 100 }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        lastSeenAt: { $ref: '#/components/schemas/Timestamp' }
+        idleExpiresAt: { $ref: '#/components/schemas/Timestamp' }
+        absoluteExpiresAt: { $ref: '#/components/schemas/Timestamp' }
+        current: { type: boolean }
     CreatePostRequest:
       type: object
       additionalProperties: false
       required: [content]
       properties:
-        content: { type: string, minLength: 1, maxLength: 500 }
+        content:
+          type: string
+          minLength: 1
+          description: Between 1 and 500 Unicode grapheme clusters after trimming; at most 8192 UTF-8 bytes.
     Post:
       type: object
-      required: [id, authorId, replyToPostId, content, effectiveVisibility, state, version, createdAt, updatedAt]
+      required: [id, authorId, replyToPostId, content, effectiveVisibility, state, version, createdAt, updatedAt, editedAt]
       properties:
         id: { $ref: '#/components/schemas/ObjectId' }
         authorId: { $ref: '#/components/schemas/ObjectId' }
@@ -375,12 +450,21 @@ components:
           oneOf:
             - { $ref: '#/components/schemas/ObjectId' }
             - { type: 'null' }
-        content: { type: string }
+        content:
+          oneOf:
+            - type: string
+              minLength: 1
+              description: Between 1 and 500 Unicode grapheme clusters; at most 8192 UTF-8 bytes.
+            - { type: 'null' }
         effectiveVisibility: { type: string, enum: [public, followers] }
-        state: { type: string, enum: [published, deleted, tombstone] }
+        state: { type: string, enum: [published, tombstone] }
         version: { type: integer, format: int64, minimum: 1 }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
+        editedAt:
+          oneOf:
+            - { $ref: '#/components/schemas/Timestamp' }
+            - { type: 'null' }
     FollowRelationship:
       type: object
       required: [id, followerId, followeeId, status, createdAt, updatedAt]
@@ -413,5 +497,5 @@ components:
         detail: { type: string }
         code:
           type: string
-          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, rate_limited]
+          enum: [auth_required, csrf_failed, forbidden, internal_error, resource_not_found, version_conflict, precondition_required, problem_validation_failed, handle_conflict, handle_change_too_soon, reauthentication_required, session_limit_reached, rate_limited, idempotency_required, idempotency_conflict, content_empty, content_too_long, content_too_large, edit_window_expired]
         requestId: { type: string }

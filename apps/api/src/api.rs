@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    http::{StatusCode, Uri, header},
+    http::{HeaderMap, StatusCode, Uri, header},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
@@ -25,6 +25,31 @@ pub async fn not_found(uri: Uri) -> Problem {
     )
 }
 
+pub fn parse_if_match(headers: &HeaderMap) -> Result<i64, Problem> {
+    let value = headers
+        .get(header::IF_MATCH)
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| {
+            Problem::new(
+                StatusCode::PRECONDITION_REQUIRED,
+                "precondition_required",
+                "If-Match is required",
+            )
+        })?;
+    value
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .and_then(|value| value.parse().ok())
+        .filter(|version: &i64| *version > 0)
+        .ok_or_else(|| {
+            Problem::new(
+                StatusCode::PRECONDITION_FAILED,
+                "version_conflict",
+                "If-Match is invalid",
+            )
+        })
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Problem {
@@ -35,6 +60,8 @@ pub struct Problem {
     code: Box<str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     request_id: Option<Box<str>>,
+    #[serde(skip)]
+    retry_after: Option<u64>,
 }
 
 impl Problem {
@@ -46,13 +73,20 @@ impl Problem {
             detail: detail.into().into_boxed_str(),
             code: code.into(),
             request_id: None,
+            retry_after: None,
         }
+    }
+
+    pub fn with_retry_after(mut self, seconds: u64) -> Self {
+        self.retry_after = Some(seconds);
+        self
     }
 }
 
 impl IntoResponse for Problem {
     fn into_response(self) -> Response {
         let status = StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let retry_after = self.retry_after;
         let mut response = (status, Json(self)).into_response();
         response.headers_mut().insert(
             header::CONTENT_TYPE,
@@ -60,6 +94,12 @@ impl IntoResponse for Problem {
                 .parse()
                 .expect("valid media type"),
         );
+        if let Some(seconds) = retry_after {
+            response.headers_mut().insert(
+                header::RETRY_AFTER,
+                seconds.to_string().parse().expect("valid Retry-After"),
+            );
+        }
         response
     }
 }
@@ -78,6 +118,14 @@ mod tests {
             "^[0-9A-Za-z]{22}$"
         );
         assert!(document["components"]["schemas"]["Problem"].is_object());
+    }
+
+    #[tokio::test]
+    async fn rate_limit_problem_sets_retry_after() {
+        let response = Problem::new(StatusCode::TOO_MANY_REQUESTS, "rate_limited", "Slow down")
+            .with_retry_after(60)
+            .into_response();
+        assert_eq!(response.headers()[header::RETRY_AFTER], "60");
     }
 
     #[tokio::test]

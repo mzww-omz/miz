@@ -116,6 +116,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSessions"];
+        put?: never;
+        post?: never;
+        delete: operations["revokeAllSessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeCurrentSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/me": {
         parameters: {
             query?: never;
@@ -259,22 +307,33 @@ export interface components {
             /** @enum {string} */
             privacy?: "public" | "private";
         };
+        Session: {
+            id: components["schemas"]["ObjectId"];
+            deviceName: string;
+            createdAt: components["schemas"]["Timestamp"];
+            lastSeenAt: components["schemas"]["Timestamp"];
+            idleExpiresAt: components["schemas"]["Timestamp"];
+            absoluteExpiresAt: components["schemas"]["Timestamp"];
+            current: boolean;
+        };
         CreatePostRequest: {
+            /** @description Between 1 and 500 Unicode grapheme clusters after trimming; at most 8192 UTF-8 bytes. */
             content: string;
         };
         Post: {
             id: components["schemas"]["ObjectId"];
             authorId: components["schemas"]["ObjectId"];
             replyToPostId: components["schemas"]["ObjectId"] | null;
-            content: string;
+            content: string | null;
             /** @enum {string} */
             effectiveVisibility: "public" | "followers";
             /** @enum {string} */
-            state: "published" | "deleted" | "tombstone";
+            state: "published" | "tombstone";
             /** Format: int64 */
             version: number;
             createdAt: components["schemas"]["Timestamp"];
             updatedAt: components["schemas"]["Timestamp"];
+            editedAt: components["schemas"]["Timestamp"] | null;
         };
         FollowRelationship: {
             id: components["schemas"]["ObjectId"];
@@ -296,7 +355,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "rate_limited";
+            code: "auth_required" | "csrf_failed" | "forbidden" | "internal_error" | "resource_not_found" | "version_conflict" | "precondition_required" | "problem_validation_failed" | "handle_conflict" | "handle_change_too_soon" | "reauthentication_required" | "session_limit_reached" | "rate_limited" | "idempotency_required" | "idempotency_conflict" | "content_empty" | "content_too_long" | "content_too_large" | "edit_window_expired";
             requestId?: string;
         };
     };
@@ -487,6 +546,97 @@ export interface operations {
             410: components["responses"]["Problem"];
         };
     };
+    listSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active sessions for the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Session"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    revokeAllSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All sessions revoked */
+            204: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    revokeCurrentSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current session revoked */
+            204: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    revokeSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["schemas"]["ObjectId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
     getCurrentUser: {
         parameters: {
             query?: never;
@@ -506,6 +656,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     updateCurrentUser: {
@@ -532,10 +683,13 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     createPost: {
@@ -566,6 +720,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     getPost: {
@@ -588,7 +743,9 @@ export interface operations {
                     "application/json": components["schemas"]["Post"];
                 };
             };
+            401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     deletePost: {
@@ -612,10 +769,10 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     updatePost: {
@@ -644,11 +801,13 @@ export interface operations {
                     "application/json": components["schemas"]["Post"];
                 };
             };
+            400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
         };
     };
     createReply: {

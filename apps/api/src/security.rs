@@ -103,11 +103,11 @@ pub async fn require_session(
         )
     })?;
     let token_hash = hash(session_token.as_bytes()).to_vec();
-    let identity: (Vec<u8>, String, Vec<u8>) = sqlx::query_as(
+    let identity: (Vec<u8>, Vec<u8>, String, Vec<u8>) = sqlx::query_as(
         "UPDATE sessions AS session SET last_seen_at = now(), idle_expires_at = LEAST(now() + INTERVAL '7 days', absolute_expires_at) \
-         FROM users WHERE session.user_id = users.id AND session.token_hash = $1 AND session.revoked_at IS NULL \
+         FROM users WHERE session.user_id = users.id AND users.status = 'active' AND session.token_hash = $1 AND session.revoked_at IS NULL \
          AND session.idle_expires_at > now() AND session.absolute_expires_at > now() \
-         RETURNING session.user_id, users.role, session.csrf_token_hash",
+         RETURNING session.user_id, session.id, users.role, session.csrf_token_hash",
     )
     .bind(token_hash)
     .fetch_optional(&state.pool)
@@ -118,7 +118,11 @@ pub async fn require_session(
         .0
         .try_into()
         .map_err(|_| internal_error("invalid user ID"))?;
-    let role = match identity.1.as_str() {
+    let session_id: [u8; 16] = identity
+        .1
+        .try_into()
+        .map_err(|_| internal_error("invalid session ID"))?;
+    let role = match identity.2.as_str() {
         "user" => Role::User,
         "moderator" => Role::Moderator,
         "administrator" => Role::Administrator,
@@ -131,7 +135,7 @@ pub async fn require_session(
         Method::GET | Method::HEAD | Method::OPTIONS
     ) {
         let csrf = cookie(request.headers(), CSRF_COOKIE).ok_or_else(csrf_problem)?;
-        if !verify_secret(csrf, &identity.2) {
+        if !verify_secret(csrf, &identity.3) {
             return Err(csrf_problem());
         }
     }
@@ -144,6 +148,7 @@ pub async fn require_session(
     .await?;
     request.extensions_mut().insert(Principal {
         user_id: UserId::from_bytes(user_id),
+        session_id: SessionId::from_bytes(session_id),
         role,
     });
     Ok(next.run(request).await)
@@ -164,7 +169,12 @@ fn enforce_csrf(
     let header_token = headers
         .get(CSRF_HEADER)
         .and_then(|value| value.to_str().ok());
+    let fetch_site_is_safe = headers
+        .get("sec-fetch-site")
+        .and_then(|value| value.to_str().ok())
+        .is_none_or(|value| matches!(value, "same-origin" | "same-site" | "none"));
     let valid = origin == Some(expected_origin)
+        && fetch_site_is_safe
         && cookie_token.zip(header_token).is_some_and(|(left, right)| {
             left.len() == right.len() && bool::from(left.as_bytes().ct_eq(right.as_bytes()))
         });
@@ -195,7 +205,8 @@ async fn enforce_rate_limit(
             StatusCode::TOO_MANY_REQUESTS,
             "rate_limited",
             "Rate limit exceeded",
-        ))
+        )
+        .with_retry_after(60))
     }
 }
 
@@ -205,17 +216,51 @@ pub async fn create_or_rotate_session(
     device_name: &str,
     current_session_token: Option<&str>,
 ) -> Result<SessionTokens, Problem> {
+    if device_name.chars().count() > 100 {
+        return Err(Problem::new(
+            StatusCode::BAD_REQUEST,
+            "problem_validation_failed",
+            "deviceName must contain at most 100 characters",
+        ));
+    }
     let tokens = SessionTokens::generate().map_err(internal_error)?;
     let session_id = SessionId::new().map_err(internal_error)?;
     let mut transaction = pool.begin().await.map_err(internal_error)?;
+    sqlx::query("SELECT id FROM users WHERE id = $1 AND status = 'active' FOR UPDATE")
+        .bind(user_id.to_bytes().to_vec())
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(internal_error)?;
     if let Some(current) = current_session_token {
-        sqlx::query(
-            "UPDATE sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL",
+        let revoked = sqlx::query(
+            "UPDATE sessions SET revoked_at = now() WHERE token_hash = $1 AND user_id = $2 AND revoked_at IS NULL",
         )
         .bind(hash(current.as_bytes()).to_vec())
+        .bind(user_id.to_bytes().to_vec())
         .execute(&mut *transaction)
         .await
         .map_err(internal_error)?;
+        if revoked.rows_affected() != 1 {
+            return Err(Problem::new(
+                StatusCode::UNAUTHORIZED,
+                "auth_required",
+                "Current session is invalid or expired",
+            ));
+        }
+    }
+    let active_sessions: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM sessions WHERE user_id = $1 AND revoked_at IS NULL AND idle_expires_at > now() AND absolute_expires_at > now()",
+    )
+    .bind(user_id.to_bytes().to_vec())
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(internal_error)?;
+    if active_sessions >= 10 {
+        return Err(Problem::new(
+            StatusCode::CONFLICT,
+            "session_limit_reached",
+            "End an existing session before signing in on another device",
+        ));
     }
     sqlx::query(
         "INSERT INTO sessions (id, user_id, token_hash, csrf_token_hash, device_name, idle_expires_at, absolute_expires_at) \
@@ -318,6 +363,9 @@ mod tests {
         );
         headers.insert(CSRF_HEADER, "secret".parse().unwrap());
         assert!(enforce_csrf(&Method::POST, &headers, "https://m1z.jp").is_ok());
+        headers.insert("sec-fetch-site", "cross-site".parse().unwrap());
+        assert!(enforce_csrf(&Method::POST, &headers, "https://m1z.jp").is_err());
+        headers.insert("sec-fetch-site", "same-origin".parse().unwrap());
         headers.insert(header::ORIGIN, "https://evil.example".parse().unwrap());
         assert!(enforce_csrf(&Method::POST, &headers, "https://m1z.jp").is_err());
         assert!(enforce_csrf(&Method::GET, &HeaderMap::new(), "https://m1z.jp").is_ok());

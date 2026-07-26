@@ -4,10 +4,17 @@ async fn migrations_apply_twice_and_create_core_tables() {
         return;
     };
     let pool = sqlx::PgPool::connect(&url).await.unwrap();
-    sqlx::migrate!("../../migrations").run(&pool).await.unwrap();
-    sqlx::migrate!("../../migrations").run(&pool).await.unwrap();
+    miz_api::infrastructure::migrate(&pool).await.unwrap();
+    miz_api::infrastructure::migrate(&pool).await.unwrap();
 
-    for table in ["users", "posts", "follow_relationships", "sessions"] {
+    for table in [
+        "users",
+        "posts",
+        "post_edit_history",
+        "idempotency_keys",
+        "follow_relationships",
+        "sessions",
+    ] {
         let exists: bool = sqlx::query_scalar(
             "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)",
         )
