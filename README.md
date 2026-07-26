@@ -13,10 +13,19 @@ MIZ is a social platform.
 - `infra`: deployment and operations configuration
 - `docs/adr`: architecture decision records
 
-## Local checks
+## Local development
+
+```sh
+docker compose up --build
+```
+
+Open <http://localhost:8080>. The gateway serves the web app and forwards `/api/*`, `/healthz`, and `/readyz` to the Rust API on the same origin.
+
+## Checks
 
 ```sh
 cargo check
 pnpm install
 pnpm check
+pnpm build
 ```
